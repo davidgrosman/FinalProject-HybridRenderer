@@ -1,57 +1,50 @@
-# TLVulkanRenderer
-A simple Vulkan-based renderer for my [master thesis](https://docs.google.com/document/d/1YOAv2D23j74bExjP2MCMmDOQPquy9ywhBTW-tgU2QXA/edit?usp=sharing) on real-time transparency.
+# University of Pennsylvania, CIS 565: GPU Programming and Architecture.
+Final Project: Hybrid Ray-Raster Renderer in Vulkan
+===============
 
-The renderer will be a rasterizer the implements [phenomenological transparency](http://graphics.cs.williams.edu/papers/TransparencyI3D16/McGuire2016Transparency.pdf) to demonstrate how the GPU could map well to this algorithm for real-time transparency.
+## Team members
+- **Names:** Trung Le and David Grosman.
+- **Tested on:** 
+ * Microsoft Windows 10 Home, i7-4790 CPU @ 3.60GHz 12GB, GTX 980 Ti (Person desktop).
+ * Microsoft Windows  7 Professional, i7-5600U @ 2.6GHz, 256GB, GeForce 840M (Personal laptop).
 
-This project also documents my learning progress with Vulkan and GPU programming.
+## Overview
+Deferred rendering has gained major popularity over the last few years in the development of video games. Some of its advantages are the fact that it reduces the rendering algorithm complexity from O(numLights*numObjects) to O(numLights+numObjects) by rendering a
+scene in two passes: It first renders the scene geometry into a G-Buffer and then, uses that G-Buffer to calculate the scene lighting in a second pass. It is also easier to maintain since the Lighting stage is entirely disconnected from the Geometry stage. Unfortunately, deferred rendering is not the best solution for all cases:
+ 1. The G-Buffer can require a lot of memory especially at higher screen resolutions. Furthermore, material characteristics are stored in diverse render targets. The more diverse the materials, the more target buffers are needed which might hit A hardware limit (Thus, the introduction of light pre-pass renderer).
+ 2. It does not handle hardware anti-aliasing (ie.: depth, position attributes cannot be blended).
+ 3. There is no direct support for translucent objects (The G-Buffer can only retain information for one 'layer').
 
-# Releases
+To mitigate these issues, we want to implement a hybrid raytracer-rasterizer[1] program in Vulkan[2] to accommodate rendering transparent objects for games. The basic concept is to first use rasterization through a deferred-renderer to capture all objects in our scene and then apply a full-screen ray tracing pass by tracing rays initialized from the G-buffer information (ie.: position, normal, albedo of the closest layer from the camera) to render transparency and correct shadows. A ray-raster hybrid can also offer better anti-aliasing than the traditional shadow mapping of a pure rasterizer. There would also not be any need for composing the G-Buffer of many render targets.
 
-https://github.com/trungtle/TLVulkanRenderer/releases
+The ray tracing component relies heavily on the compute power of the GPU, so we decided to use the Vulkan API since it supports access to both the graphics queue and the compute queue. In comparison to OpenGL, Vulkan doesn’t offer a drastic improvement in performance if the pipeline follows the rasterize-then-raytrace pattern. However, rasterization and ray tracing can be done asynchronously because Vulkan (and DirectX12) supports async compute[3]. This is a new feature that explicit graphics API offer over the traditional OpenGL style API that puts modern game engines in the more effective multithreading pattern. Games such as DOOM[4] and Rise of the Tomb Raider[5] take advantage of this async compute power to optimize for performance on threads that are idle and ready to submit compute command buffers. Note that not many hardware in the market support async-compute natively and we aren't yet sure where/how we might use it for our application.
 
-# Updates
+To summarize, our final project is two-fold: 
+ 1. Take advantage of a deferred-renderer (by focusing on the 'closest' layer only) while mitigating its issues with transparent objects, anti-aliasing and large memory requirements.
+ 2. Taking advantage of the Vulkan’s Compute/Graphics queues to optimize for performance.
 
-### Nov 4, 2016 - Memory & Depth Image
+As the end result, we would like to demonstrate both of the above bullet points to be feasible and analyze the performance with async compute on versus off (or Ray-Raster vs Deferred-Renderer Only) to validate our hypothesis of its advantage.
 
-| Normal | Depth | Lambert |
-|---|---|---|
-|![](TLVulkanRenderer/images/head_normal.png)|![](TLVulkanRenderer/images/head_depth.png)|![](TLVulkanRenderer/images/head_lambert.png)|
+Part of the goal for this project is also to learn about explicit graphics API for rendering.
 
-#### Memory management
+![A](TLVulkanRenderer/images/DefRayTracing.png)
+_Image taken from [Practical techniques for ray-tracing in games](http://www.gamasutra.com/blogs/AlexandruVoica/20140318/213148/Practical_techniques_for_ray_tracing_in_games.php)_
+ 
+### Milestones
 
-In order to achieve cache ultilization and limit the amount of costly memory allocation, I packed the vertex indices and vertex attributes data for each mesh into the same `VkDeviceMemory` allocation and the same `VkBuffer`, and leaving the uniform buffer in its own `VkDeviceMemory` since it's being updated every frame. This helps reduce the initialization time to load each scene since we no longer have to create a new `VkBuffer` and allocate a new `VkDeviceMemoy` for each attribute.
+1. Deferred rendering with G-buffer: positions, normals, materials ID, albedo. Naive ray tracing and acceleration structure (kd-tree).
+2. Raytracing on G-buffer using compute.
+3. Performance analysis: comparing hybrid ray-raster with traditional deferred rendering and raytracing.
 
-Instead of directly map memory from the host, I create a temporary buffer for staging and transfer the data onto device memory this way.
-
-![](TLVulkanRenderer/images/charts/Vulkan_memory_layout.png)
-
-In this layout scheme, we still need to partition based on each mesh data because when the meshes are extracted from glTF, each of them have their unique buffer view that needs to be handled properly. It seems to me that it's possible that we can just directly copy this glTF's buffer view into `VkDeviceMemory` and offset the `VkBuffer` correctly from there. It's also possibl to resuse the same `VkDeviceMemory` for different `VkBuffer`, but it seems quite error-prone to me to go down that path.  
-
-More details can be found at [Vulkan Memory Management](https://developer.nvidia.com/vulkan-memory-management) from NVIDIA.
-
-#### Depth buffer
-
-![](TLVulkanRenderer/images/head_depth.png)
-
-The depth buffer in Vulkan is represented using a [`VkImage`](https://www.khronos.org/registry/vulkan/specs/1.0/xhtml/vkspec.html#resources-images). It's a type of resource that the framebuffer uses to store its data. Similarly to the [`VkImage`](https://www.khronos.org/registry/vulkan/specs/1.0/xhtml/vkspec.html#resources-images)s inside the swapchain, a depth image is just another attachment to the renderpass. However, depth image still has to be created as an additional resource that we need to manage. I allocated a screen size depth resource for populating the depth data in, and then attache the depth image to the renderpass's subpass (I only use one subpass). 
-
-After that, the graphics pipeline creation needs to be modified to enable the depth and stentil stage by setting [VkPipelineDepthStencilStateCreateInfo](https://www.khronos.org/registry/vulkan/specs/1.0/xhtml/vkspec.html#VkPipelineDepthStencilStateCreateInfo) struct and set its pointer to the graphics pipeline.
-
-### Oct 21, 2016 - This time is for glTF!
-
-[Duck](TLVulkanRenderer/scenes/Duck) mesh in glTF format (partially complete, shading hasn't been implemented properly)! 
-
-Right now I was able to load the index data and vertex data. I'm working on merging all the vertex buffers required for position, normal, texcoord attributes, indices, and uniforms, into a single buffer or memory allocation as recommended in the [Vulkan Memory Management](https://developer.nvidia.com/vulkan-memory-management) blog by Chris Hebert ([@chrisjebert1973](https://github.com/chrisjebert1973)) and Christoph Kubisch.
-
-![](TLVulkanRenderer/images/duck_rotation.gif)
-
-### Oct 14, 2016 - Triangles!
-
-Finished base rasterizer code to render a triangle.
-
-![](TLVulkanRenderer/images/Triangle.PNG)
-
-# Requirements
+ 
+### Plan
+ 1. A basic Vulkan deferred renderer with glTF mesh support.
+ 2. Ray tracing for transparent objects using compute shaders.
+ 3. Physically accurate shadows and better support for anti-aliasing via ray tracing.
+ 4. An acceleration data structure, BVH or kd-tree, for ray tracing. (Async Compute)
+ 5. (stretch) Async compute for multithreading.
+ 
+# Build
 
 - Build using x64 Visual Studio 2015 on Windows with a [Vulkan](https://www.khronos.org/vulkan/) support graphics card (Most discrete GPU in the last couple years should have Vulkan support). You can also check [NVIDIA support](https://developer.nvidia.com/vulkan-driver).
 - [glfw 3.2.1](http://www.glfw.org/)
@@ -78,13 +71,18 @@ Finished base rasterizer code to render a triangle.
 
 ### References
 
-Majority of this application was modified from:
-
   - [Vulkan Tutorial](https://vulkan-tutorial.com/) by Alexander Overvoorde. [Github](https://github.com/Overv/VulkanTutorial). 
   - WSI Tutorial by Chris Hebert
   - [Vulkan Samples](https://github.com/SaschaWillems/Vulkan) by Sascha Willems
   - [Vulkan Whitepaper](https://www.kdab.com/wp-content/uploads/stories/KDAB-whitepaper-Vulkan-2016-01-v4.pdf)
   - [Vulkan 1.0.28 - A Specification](https://www.khronos.org/registry/vulkan/specs/1.0-wsi_extensions/pdf/vkspec.pdf)
+  * [Practical techniques for ray-tracing in games](http://www.gamasutra.com/blogs/AlexandruVoica/20140318/213148/Practical_techniques_for_ray_tracing_in_games.php)
+  * [GDCVault14: Practical techniques for ray-tracing in games] (http://www.gdcvault.com/play/1020688/Practical-Techniques-for-Ray-Tracing)
+  * [Vulkan, Industry Forged](https://www.khronos.org/vulkan/)
+  * [Asynchronous Compute in DX12 & Vulkan: Dispelling Myths & Misconceptions Concurrently](https://youtu.be/XOGIDMJThto)
+  * [Doom benchmarks return: Vulkan vs. OpenGL](http://www.pcgamer.com/doom-benchmarks-return-vulkan-vs-opengl/2/)
+  * [Rise of the Tomb Raider async compute update boosts performance on AMD hardware](https://www.extremetech.com/gaming/231481-rise-of-the-tomb-raider-async-compute-update-improves-performance-on-amd-hardware-flat-on-maxwell)
+  * [Imagination PowerVR 6XT GR6500 mobile GPU - Ray Tracing demos vs Nvidia Geforce GTX 980 Ti](https://youtu.be/ND96G9UZxxA)
 
  ### Models
 
