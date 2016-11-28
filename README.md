@@ -1,4 +1,3 @@
-# University of Pennsylvania, CIS 565: GPU Programming and Architecture.
 Final Project: Hybrid Ray-Raster Renderer in Vulkan
 ===============
 
@@ -7,6 +6,11 @@ Final Project: Hybrid Ray-Raster Renderer in Vulkan
 - **Tested on:** 
  * Microsoft Windows 10 Home, i7-4790 CPU @ 3.60GHz 12GB, GTX 980 Ti (Person desktop).
  * Microsoft Windows  7 Professional, i7-5600U @ 2.6GHz, 256GB, GeForce 840M (Personal laptop).
+
+# Pitch
+
+For quick summary: we are building a hybrid raytracer on top of the G-Buffer of a deferred renderer using the compute shader in Vulkan.
+Please see [FinalProjectPitch.md](FinalProjectPitch.md) for full description of the project.
 
 # Base code
 
