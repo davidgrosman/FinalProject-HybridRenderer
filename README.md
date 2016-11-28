@@ -10,7 +10,7 @@ Final Project: Hybrid Ray-Raster Renderer in Vulkan
 # Pitch
 
 For quick summary: we are building a hybrid raytracer on top of the G-Buffer of a deferred renderer using the compute shader in Vulkan.
-Please see [FinalProjectPitch.md](FinalProjectPitch.md) for full description of the project.
+Please see [FinalProjectPitch.md](/docs/FinalProjectPitch.md) for full description of the project.
 
 # Base code
 
@@ -35,15 +35,15 @@ Application -> VulkanRenderer -> [VulkanDeferredRenderer, VulkanRaytracers] -> V
 
 - **Deferred renderer**: The deferred renderer is built on top of Sascha Willems' sample and currently reading in a collada file format and .ktx texture. The renderer can render multiple fast moving lights. We demonstrated it here with a [small Sponza scene](https://github.com/domme/VoxelConeTracing/tree/master/bin/assets/meshes)
 
-![](/images/raytraced_sponza.gif)
+![](/docs/images/raytraced_sponza.gif)
 
 - **Ray tracer with glTF**: This raytracer uses a compute shader to shoot ray into the scene. The glTF model is loaded using [tinygltfloader](https://github.com/syoyo/tinygltfloader) by [@soyoyo](https://github.com/syoyo), then converted to a list of materials, a list of indices, vertex positions, vertex normals, and vertex texture coordinates. The compute shader then parse this information to reconstruct triangles to perform ray-triangle intersection. The shaded fragment is then stored inside an image buffer to be display in the screen's framebuffer. 
 
-![](/images/raytraced_cornell.gif)
+![](/docs/images/raytraced_cornell.gif)
 
 Below is a scene with the [octocat]() by [Sally Kong](https://sketchfab.com/models/cad2ffa5d8a24423ab246ee0916a7f3e) inside a Cornell box. The scene was prepared in Maya. 
 
-![](/images/raytraced_octocat.png)
+![](/docs/images/raytraced_octocat.png)
 
 _Notice the shadow from the light source onto the ground caused by using light feeler rays_
 
