@@ -427,8 +427,8 @@ void VulkanDeferredRenderer::buildDeferredCommandBuffer()
 
 void VulkanDeferredRenderer::loadTextures()
 {
-	m_textureLoader->loadTexture(getAssetPath() + "models/armor/colormap.ktx", VK_FORMAT_BC3_UNORM_BLOCK, &m_modelTex.m_colorMap);
-	m_textureLoader->loadTexture(getAssetPath() + "models/armor/normalmap.ktx", VK_FORMAT_BC3_UNORM_BLOCK, &m_modelTex.m_normalMap);
+	m_textureLoader->loadTexture(getAssetPath() + "textures/pattern_35_bc3.ktx", VK_FORMAT_BC3_UNORM_BLOCK, &m_modelTex.m_colorMap);
+	m_textureLoader->loadTexture(getAssetPath() + "textures/pattern_35_normalmap_bc3.ktx", VK_FORMAT_BC3_UNORM_BLOCK, &m_modelTex.m_normalMap);
 
 	m_textureLoader->loadTexture(getAssetPath() + "textures/pattern_35_bc3.ktx", VK_FORMAT_BC3_UNORM_BLOCK, &m_floorTex.m_colorMap);
 	m_textureLoader->loadTexture(getAssetPath() + "textures/pattern_35_normalmap_bc3.ktx", VK_FORMAT_BC3_UNORM_BLOCK, &m_floorTex.m_normalMap);
@@ -507,13 +507,15 @@ void VulkanDeferredRenderer::buildCommandBuffers()
 
 void VulkanDeferredRenderer::loadMeshes()
 {
-	loadMesh(getAssetPath() + "models/armor/armor.dae", &m_sceneMeshes.m_model, vertexLayout, 1.0f);
+	loadMesh(getAssetPath() + "models/crytek-sponza/crytek-sponza.dae", &m_sceneMeshes.m_model, vertexLayout, 1.0f);
 
 	vkMeshLoader::MeshCreateInfo meshCreateInfo;
 	meshCreateInfo.scale = glm::vec3(2.0f);
 	meshCreateInfo.uvscale = glm::vec2(4.0f);
 	meshCreateInfo.center = glm::vec3(0.0f, 2.35f, 0.0f);
 	loadMesh(getAssetPath() + "models/plane.obj", &m_sceneMeshes.m_floor, vertexLayout, &meshCreateInfo);
+	
+	loadMesh(getAssetPath() + "models/gltfs/box/box.gltf", &m_sceneMeshes.m_duck, vertexLayout, &meshCreateInfo, true);
 }
 
 void VulkanDeferredRenderer::generateQuads()
@@ -1016,7 +1018,7 @@ void VulkanDeferredRenderer::updateUniformBufferDeferredLights(SRendererContext&
 	// White
 	m_uboFragmentLights.m_lights[0].position = glm::vec4(0.0f, 0.0f, 1.0f, 0.0f);
 	m_uboFragmentLights.m_lights[0].color = glm::vec3(1.5f);
-	m_uboFragmentLights.m_lights[0].radius = 15.0f * 0.25f;
+	m_uboFragmentLights.m_lights[0].radius = 50.0f;
 	// Red
 	m_uboFragmentLights.m_lights[1].position = glm::vec4(-2.0f, 0.0f, 0.0f, 0.0f);
 	m_uboFragmentLights.m_lights[1].color = glm::vec3(1.0f, 0.0f, 0.0f);
@@ -1038,20 +1040,20 @@ void VulkanDeferredRenderer::updateUniformBufferDeferredLights(SRendererContext&
 	m_uboFragmentLights.m_lights[5].color = glm::vec3(1.0f, 0.7f, 0.3f);
 	m_uboFragmentLights.m_lights[5].radius = 25.0f;
 
-	m_uboFragmentLights.m_lights[0].position.x = sin(glm::radians(360.0f * timer)) * 5.0f;
-	m_uboFragmentLights.m_lights[0].position.z = cos(glm::radians(360.0f * timer)) * 5.0f;
+	m_uboFragmentLights.m_lights[0].position.x = sin(glm::radians(36.0f * timer)) * 5.0f;
+	m_uboFragmentLights.m_lights[0].position.z = cos(glm::radians(36.0f * timer)) * 5.0f;
 
-	m_uboFragmentLights.m_lights[1].position.x = -4.0f + sin(glm::radians(360.0f * timer) + 45.0f) * 2.0f;
-	m_uboFragmentLights.m_lights[1].position.z = 0.0f + cos(glm::radians(360.0f * timer) + 45.0f) * 2.0f;
+	m_uboFragmentLights.m_lights[1].position.x = -4.0f + sin(glm::radians(36.0f * timer) + 45.0f) * 2.0f;
+	m_uboFragmentLights.m_lights[1].position.z = 0.0f + cos(glm::radians(36.0f * timer) + 45.0f) * 2.0f;
 
-	m_uboFragmentLights.m_lights[2].position.x = 4.0f + sin(glm::radians(360.0f * timer)) * 2.0f;
-	m_uboFragmentLights.m_lights[2].position.z = 0.0f + cos(glm::radians(360.0f * timer)) * 2.0f;
+	m_uboFragmentLights.m_lights[2].position.x = 4.0f + sin(glm::radians(36.0f * timer)) * 2.0f;
+	m_uboFragmentLights.m_lights[2].position.z = 0.0f + cos(glm::radians(36.0f * timer)) * 2.0f;
 
-	m_uboFragmentLights.m_lights[4].position.x = 0.0f + sin(glm::radians(360.0f * timer + 90.0f)) * 5.0f;
-	m_uboFragmentLights.m_lights[4].position.z = 0.0f - cos(glm::radians(360.0f * timer + 45.0f)) * 5.0f;
+	m_uboFragmentLights.m_lights[4].position.x = 0.0f + sin(glm::radians(36.0f * timer + 90.0f)) * 5.0f;
+	m_uboFragmentLights.m_lights[4].position.z = 0.0f - cos(glm::radians(36.0f * timer + 45.0f)) * 5.0f;
 
-	m_uboFragmentLights.m_lights[5].position.x = 0.0f + sin(glm::radians(-360.0f * timer + 135.0f)) * 10.0f;
-	m_uboFragmentLights.m_lights[5].position.z = 0.0f - cos(glm::radians(-360.0f * timer - 45.0f)) * 10.0f;
+	m_uboFragmentLights.m_lights[5].position.x = 0.0f + sin(glm::radians(-36.0f * timer + 135.0f)) * 10.0f;
+	m_uboFragmentLights.m_lights[5].position.z = 0.0f - cos(glm::radians(-36.0f * timer - 45.0f)) * 10.0f;
 
 	// Current view position
 	m_uboFragmentLights.m_viewPos = glm::vec4(context.m_camera.m_position, 0.0f) * glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f);
