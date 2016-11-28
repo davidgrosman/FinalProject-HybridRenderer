@@ -123,9 +123,9 @@ void VulkanDeferredRenderer::shutdownVulkan()
 	vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayout, nullptr);
 
 	// Meshes
-	vkMeshLoader::freeMeshBufferResources(m_device, &m_sceneMeshes.m_model);
-	vkMeshLoader::freeMeshBufferResources(m_device, &m_sceneMeshes.m_floor);
-	vkMeshLoader::freeMeshBufferResources(m_device, &m_sceneMeshes.m_quad);
+	VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_model);
+	VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_floor);
+	VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_quad);
 
 	// Uniform buffers
 	vkUtils::destroyUniformData(m_device, &m_uniformData.m_vsOffscreen);

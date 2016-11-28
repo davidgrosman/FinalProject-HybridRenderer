@@ -283,18 +283,14 @@ void VulkanRenderer::loadMesh(std::string filename, vkMeshLoader::MeshBuffer * m
 
 void VulkanRenderer::loadMesh(std::string filename, vkMeshLoader::MeshBuffer * meshBuffer, std::vector<vkMeshLoader::VertexLayout> vertexLayout, vkMeshLoader::MeshCreateInfo *meshCreateInfo)
 {
-	VulkanMeshLoader *mesh = new VulkanMeshLoader(m_vulkanDevice);
-
-#if defined(__ANDROID__)
-	mesh->assetManager = androidApp->activity->assetManager;
-#endif
-
+	VulkanMeshLoader *mesh = new VulkanMeshLoader();
 	mesh->LoadMesh(filename);
-	assert(mesh->m_Entries.size() > 0);
+	
 
 	VkCommandBuffer copyCmd = VulkanRenderer::createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, false);
 
 	mesh->createBuffers(
+		m_vulkanDevice,
 		meshBuffer,
 		vertexLayout,
 		meshCreateInfo,
