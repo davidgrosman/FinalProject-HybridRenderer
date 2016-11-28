@@ -33,6 +33,10 @@ The high level overview of the application is:
 Application -> VulkanRenderer -> [VulkanDeferredRenderer, VulkanRaytracers] -> VulkanHybridRayRaster
 ```
 
+Below is the high level component diagram:
+
+![](/docs/images/FinalProject-HybridRayRaster_ComponentDiagram.png)
+
 - **Deferred renderer**: The deferred renderer is built on top of Sascha Willems' sample and currently reading in a collada file format and .ktx texture. The renderer can render multiple fast moving lights. We demonstrated it here with a [small Sponza scene](https://github.com/domme/VoxelConeTracing/tree/master/bin/assets/meshes)
 
 ![](/docs/images/raytraced_sponza.gif)
