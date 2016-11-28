@@ -74,37 +74,37 @@ set( THIRD_PARTY_DLLS "../${EXTERNAL_LIB_PATH}/ASSIMP/assimp-vc140-mt.dll")
 
 file(GLOB SOURCE *.cpp code/*.cpp *.h code/*.h)
 
-# Function for building single example
-function(buildExample EXAMPLE_NAME)
+# Function for building a Vulkan application
+function(buildApplication APP_NAME)
 	file(GLOB SOURCE *.cpp code/*.cpp *.h code/*.h)
 	if(WIN32)
-		add_executable(${EXAMPLE_NAME} WIN32 ${SOURCE})
-		target_link_libraries(${EXAMPLE_NAME} ${CORELIBS} ${VULKAN_LIB} ${ASSIMP_LIBRARIES} ${WINLIBS})
+		add_executable(${APP_NAME} WIN32 ${SOURCE})
+		target_link_libraries(${APP_NAME} ${CORELIBS} ${VULKAN_LIB} ${ASSIMP_LIBRARIES} ${WINLIBS})
         
-        set_target_properties(${EXAMPLE_NAME} PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE")
-        set_target_properties(${EXAMPLE_NAME} PROPERTIES COMPILE_DEFINITIONS_DEBUG "_CONSOLE")
-        set_target_properties(${EXAMPLE_NAME} PROPERTIES LINK_FLAGS_RELWITHDEBINFO "/SUBSYSTEM:CONSOLE")
-        set_target_properties(${EXAMPLE_NAME} PROPERTIES COMPILE_DEFINITIONS_RELWITHDEBINFO "_CONSOLE")
-        set_target_properties(${EXAMPLE_NAME} PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:CONSOLE")
-        set_target_properties(${EXAMPLE_NAME} PROPERTIES LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:CONSOLE")
+        set_target_properties(${APP_NAME} PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE")
+        set_target_properties(${APP_NAME} PROPERTIES COMPILE_DEFINITIONS_DEBUG "_CONSOLE")
+        set_target_properties(${APP_NAME} PROPERTIES LINK_FLAGS_RELWITHDEBINFO "/SUBSYSTEM:CONSOLE")
+        set_target_properties(${APP_NAME} PROPERTIES COMPILE_DEFINITIONS_RELWITHDEBINFO "_CONSOLE")
+        set_target_properties(${APP_NAME} PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:CONSOLE")
+        set_target_properties(${APP_NAME} PROPERTIES LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:CONSOLE")
    
 	else(WIN32)
-		add_executable(${EXAMPLE_NAME} ${SOURCE})
-		target_link_libraries(${EXAMPLE_NAME} ${CORELIBS} ${VULKAN_LIB} ${ASSIMP_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+		add_executable(${APP_NAME} ${SOURCE})
+		target_link_libraries(${APP_NAME} ${CORELIBS} ${VULKAN_LIB} ${ASSIMP_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 	endif(WIN32)
     
     # do the copying
     foreach( file_i ${THIRD_PARTY_DLLS})
-        add_custom_command(TARGET ${EXAMPLE_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy ${file_i} "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/")
+        add_custom_command(TARGET ${APP_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy ${file_i} "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/")
     endforeach( file_i )
-endfunction(buildExample)
+endfunction(buildApplication)
 
 # Build all examples
-function(buildExamples)
-	foreach(EXAMPLE ${EXAMPLES})
-		buildExample(${EXAMPLE})
-	endforeach(EXAMPLE)
-endfunction(buildExamples)
+function(buildApplications)
+	foreach(APP ${APPLICATIONS})
+		buildApplication(${APP})
+	endforeach(APP)
+endfunction(buildApplications)
 
 # Compiler specific stuff
 IF(MSVC)
@@ -119,6 +119,6 @@ ENDIF(WIN32)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin")
 
-set(EXAMPLES HybridRenderer)
+set(APPLICATIONS HybridRenderer)
 
-buildExamples()
+buildApplications()
