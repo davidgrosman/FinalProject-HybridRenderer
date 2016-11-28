@@ -91,4 +91,6 @@ _Image taken from [Practical techniques for ray-tracing in games](http://www.gam
 * [wolf]() by [Rachel Hwang](https://www.linkedin.com/in/rachel-hwang-84a3b989). Model is converted using [obj2gltf](https://github.com/AnalyticalGraphicsInc/OBJ2GLTF).
 * [centaur model](http://tf3dm.com/3d-model/free-base-mesh-centaur--67384.html) by [BAQStudio](http://tf3dm.com/user/baqstudio), Model is converted using [obj2gltf](https://github.com/AnalyticalGraphicsInc/OBJ2GLTF).
 * Infinite, [3D Head Scan]() by Lee Perry-Smith is licensed under a Creative Commons Attribution 3.0 Unported License. Based on a work at www.triplegangers.com. This distribution was created by Morgan McGuire and Guedis Cardenas http://graphics.cs.williams.edu/data/. See [LICENSE](/gltfs/head/Infinite-Scan_License.txt). Model is converted using [obj2gltf](https://github.com/AnalyticalGraphicsInc/OBJ2GLTF).
+* [Crytek Sponza](http://graphics.cs.williams.edu/data/meshes.xml#2) modified by Morgan McGuire. The model is converted from .obj format to .dae using Maya for loading in the scene.
+* [Small Sponza](https://github.com/domme/VoxelConeTracing/tree/master/bin/assets/meshes) at [VoxelConeTracing](https://github.com/domme/VoxelConeTracing)
 
