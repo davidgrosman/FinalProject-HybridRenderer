@@ -37,7 +37,7 @@ Below is the high level component diagram:
 
 ![](/docs/images/FinalProject-HybridRayRaster_ComponentDiagram.png)
 
-- **Deferred renderer**: The deferred renderer is built on top of Sascha Willems' sample and currently reading in a collada file format and .ktx texture. The renderer can render multiple fast moving lights. We demonstrated it here with a [small Sponza scene](https://github.com/domme/VoxelConeTracing/tree/master/bin/assets/meshes)
+- **Deferred renderer**: The deferred renderer is built starting from Sascha Willems' Deferred Renderer sample but heavily restructured for easier understanding (removing non-necessary and comment code) and currently reading in a collada file format and .ktx texture. The renderer draws a position, normal, albedo texture into a G-Buffer which is then processed by multiple fast-moving lights. We demonstrated it here with a [small Sponza scene](https://github.com/domme/VoxelConeTracing/tree/master/bin/assets/meshes)
 
 ![](/docs/images/raytraced_sponza.gif)
 
