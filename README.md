@@ -8,60 +8,62 @@ Final Project: Hybrid Ray-Raster Renderer in Vulkan
  * Microsoft Windows 10 Home, i7-4790 CPU @ 3.60GHz 12GB, GTX 980 Ti (Person desktop).
  * Microsoft Windows  7 Professional, i7-5600U @ 2.6GHz, 256GB, GeForce 840M (Personal laptop).
 
-## Overview
-Deferred rendering has gained major popularity over the last few years in the development of video games. Some of its advantages are the fact that it reduces the rendering algorithm complexity from O(numLights*numObjects) to O(numLights+numObjects) by rendering a
-scene in two passes: It first renders the scene geometry into a G-Buffer and then, uses that G-Buffer to calculate the scene lighting in a second pass. It is also easier to maintain since the Lighting stage is entirely disconnected from the Geometry stage. Unfortunately, deferred rendering is not the best solution for all cases:
- 1. The G-Buffer can require a lot of memory especially at higher screen resolutions. Furthermore, material characteristics are stored in diverse render targets. The more diverse the materials, the more target buffers are needed which might hit A hardware limit (Thus, the introduction of light pre-pass renderer).
- 2. It does not handle hardware anti-aliasing (ie.: depth, position attributes cannot be blended).
- 3. There is no direct support for translucent objects (The G-Buffer can only retain information for one 'layer').
+# Base code
 
-To mitigate these issues, we want to implement a hybrid raytracer-rasterizer[1] program in Vulkan[2] to accommodate rendering transparent objects for games. The basic concept is to first use rasterization through a deferred-renderer to capture all objects in our scene and then apply a full-screen ray tracing pass by tracing rays initialized from the G-buffer information (ie.: position, normal, albedo of the closest layer from the camera) to render transparency and correct shadows. A ray-raster hybrid can also offer better anti-aliasing than the traditional shadow mapping of a pure rasterizer. There would also not be any need for composing the G-Buffer of many render targets.
+Majority of the code base was started from [Vulkan Samples](https://github.com/SaschaWillems/Vulkan) by Sascha Willems and [Vulkan Tutorial](https://vulkan-tutorial.com/) by Alexander Overvoorde. [Github](https://github.com/Overv/VulkanTutorial)
 
-The ray tracing component relies heavily on the compute power of the GPU, so we decided to use the Vulkan API since it supports access to both the graphics queue and the compute queue. In comparison to OpenGL, Vulkan doesn’t offer a drastic improvement in performance if the pipeline follows the rasterize-then-raytrace pattern. However, rasterization and ray tracing can be done asynchronously because Vulkan (and DirectX12) supports async compute[3]. This is a new feature that explicit graphics API offer over the traditional OpenGL style API that puts modern game engines in the more effective multithreading pattern. Games such as DOOM[4] and Rise of the Tomb Raider[5] take advantage of this async compute power to optimize for performance on threads that are idle and ready to submit compute command buffers. Note that not many hardware in the market support async-compute natively and we aren't yet sure where/how we might use it for our application.
+# Progress update Nov 28, 2016
 
-To summarize, our final project is two-fold: 
- 1. Take advantage of a deferred-renderer (by focusing on the 'closest' layer only) while mitigating its issues with transparent objects, anti-aliasing and large memory requirements.
- 2. Taking advantage of the Vulkan’s Compute/Graphics queues to optimize for performance.
+### Milestone 1
 
-As the end result, we would like to demonstrate both of the above bullet points to be feasible and analyze the performance with async compute on versus off (or Ray-Raster vs Deferred-Renderer Only) to validate our hypothesis of its advantage.
+This milestone was the preparation step to setup a working Vulkan application that's flexible enough as a starting point for our team. We implemented CMake build and an infrastructure of Vulkan utilities to create Vulkan devices and queues, Vulkan resources (buffers and images), Vulkan command buffers, and the graphics and the compute pipeline.
 
-Part of the goal for this project is also to learn about explicit graphics API for rendering.
 
-![A](TLVulkanRenderer/images/DefRayTracing.png)
-_Image taken from [Practical techniques for ray-tracing in games](http://www.gamasutra.com/blogs/AlexandruVoica/20140318/213148/Practical_techniques_for_ray_tracing_in_games.php)_
- 
-### Milestones
+### Milestone 2
 
-1. Deferred rendering with G-buffer: positions, normals, materials ID, albedo. Naive ray tracing and acceleration structure (kd-tree).
-2. Raytracing on G-buffer using compute.
-3. Performance analysis: comparing hybrid ray-raster with traditional deferred rendering and raytracing.
+Initially, our goal for this milestone was to have a working hybrid renderer for simple glTF models. However, due to Thanksgiving break, we were limited in time to meet this end. Instead, we leveraged this time to polish on the separate renderers - deferred renderer and ray tracer.
 
- 
-### Plan
- 1. A basic Vulkan deferred renderer with glTF mesh support.
- 2. Ray tracing for transparent objects using compute shaders.
- 3. Physically accurate shadows and better support for anti-aliasing via ray tracing.
- 4. An acceleration data structure, BVH or kd-tree, for ray tracing. (Async Compute)
- 5. (stretch) Async compute for multithreading.
+The high level overview of the application is:
+
+```
+Application -> VulkanRenderer -> [VulkanDeferredRenderer, VulkanRaytracers] -> VulkanHybridRayRaster
+```
+
+- **Deferred renderer**: The deferred renderer is built on top of Sascha Willems' sample and currently reading in a collada file format and .ktx texture. The renderer can render multiple fast moving lights. We demonstrated it here with a [small Sponza scene](https://github.com/domme/VoxelConeTracing/tree/master/bin/assets/meshes)
+
+![](/images/raytraced_sponza.gif)
+
+- **Ray tracer with glTF**: This raytracer uses a compute shader to shoot ray into the scene. The glTF model is loaded using [tinygltfloader](https://github.com/syoyo/tinygltfloader) by [@soyoyo](https://github.com/syoyo), then converted to a list of materials, a list of indices, vertex positions, vertex normals, and vertex texture coordinates. The compute shader then parse this information to reconstruct triangles to perform ray-triangle intersection. The shaded fragment is then stored inside an image buffer to be display in the screen's framebuffer. 
+
+![](/images/raytraced_cornell.gif)
+
+Below is a scene with the [octocat]() by [Sally Kong](https://sketchfab.com/models/cad2ffa5d8a24423ab246ee0916a7f3e) inside a Cornell box. The scene was prepared in Maya. 
+
+![](/images/raytraced_octocat.png)
+
+_Notice the shadow from the light source onto the ground caused by using light feeler rays_
+
+
+### Milestone 3
+
+- **Merge ray-raster**: We are planning on using milestone 3 to combine ray tracing on top of the G-Buffer from the deferred renderer. This should complete the basic requirement for a hybrid ray-raster.
+
+- **Performance analysis**: It is crucial to show the performance comparison with other types of renderer. Right now, we likely will target the CUDA path tracer and CUDA rasterizer for analysis.
+
+### Final milestone
+
+- **Demo scenes**: We will begin testing with interesting scenes to showcase the benefit of a hybrid ray-raster with transparency and shadows.
+
+- **Fixing bugs**: There will likely still be polishing work that can be done here.
+
+- **Optimization**: If time permitted, we would like to add an accelaration data structure to speed up the raytracing component. Additionally, async compute could be something worth investigating to perhaps progressively update frames when camera not moving. 
+
  
 # Build
 
-- Build using x64 Visual Studio 2015 on Windows with a [Vulkan](https://www.khronos.org/vulkan/) support graphics card (Most discrete GPU in the last couple years should have Vulkan support). You can also check [NVIDIA support](https://developer.nvidia.com/vulkan-driver).
-- [glfw 3.2.1](http://www.glfw.org/)
-- [glm](http://glm.g-truc.net/0.9.8/index.html) library by [G-Truc Creation](http://www.g-truc.net/)
-- [VulkanSDK](https://lunarg.com/vulkan-sdk/) by [LunarG](https://vulkan.lunarg.com/)
-- Addthe following paths in Visual Studio project settings (for All Configurations):
- - C/C++ -> General -> Additional Include Directories:
-    - `PATH_TO_PROJECT\TLVulkanRenderer\thirdparty`
-    - `PATH_TO_GLFW\glfw\include`
-    - `PATH_TO_VULKAN_SDK\VulkanSDK\1.0.26.0\Include`
-    - `PATH_TO_GLM\glm`
- - Linker -> General -> Additional Library Directories:
-    - `PATH_TO_VULKAN_SDK\VulkanSDK\1.0.26.0\Bin`
-    - `PATH_TO_GLM\glfw-3.2.1.bin.WIN64\lib-vc2015`
- - Linker -> Input -> Additional Dependencies:
-    - `vulkan-1.lib`
-    - `glfw3.lib`
+- Build using x64 Visual Studio 2013 on Windows with a [Vulkan](https://www.khronos.org/vulkan/) support graphics card (Most discrete GPU in the last couple years should have Vulkan support). You can also check [NVIDIA support](https://developer.nvidia.com/vulkan-driver).
+
+- Run CMake on top level directory, using Visual Studio 2013 x64 configuration.
 
 # Third party
 
