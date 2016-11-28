@@ -54,6 +54,12 @@ _Notice the shadow from the light source onto the ground caused by using light f
 
 ### Milestone 3
 
+- **GUI**: Implement GUI for:
+ 1. Display different layers of deferred rendering
+ 2. Toggle on and off hybrid mode
+ 3. Display statistics information
+ 4. Loading different scenes
+
 - **Merge ray-raster**: We are planning on using milestone 3 to combine ray tracing on top of the G-Buffer from the deferred renderer. This should complete the basic requirement for a hybrid ray-raster.
 
 - **Performance analysis**: It is crucial to show the performance comparison with other types of renderer. Right now, we likely will target the CUDA path tracer and CUDA rasterizer for analysis.
