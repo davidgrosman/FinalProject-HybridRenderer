@@ -205,3 +205,6 @@ vulkanCapsViewer/vulkanreport.json
 
 # DLLs in bin
 !bin/*.dll
+*.vcxproj
+*.filters
+*.sln

@@ -69,6 +69,7 @@ CApplication::CApplication(int width, int height) :
 	glfwInit();
 
 	// Create window
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	m_window = glfwCreateWindow(m_width, m_height, "Hybrid Renderer", NULL, NULL);
 	if (!m_window) {
 		glfwTerminate();

@@ -161,7 +161,7 @@ public:
 	void loadMesh( std::string filename, vkMeshLoader::MeshBuffer *meshBuffer, std::vector<vkMeshLoader::VertexLayout> vertexLayout, float scale);
 
 	void loadMesh( std::string filename, vkMeshLoader::MeshBuffer *meshBuffer, std::vector<vkMeshLoader::VertexLayout> vertexLayout,
-		vkMeshLoader::MeshCreateInfo *meshCreateInfo);
+		vkMeshLoader::MeshCreateInfo *meshCreateInfo, bool isGlTF = false);
 
 protected:
 

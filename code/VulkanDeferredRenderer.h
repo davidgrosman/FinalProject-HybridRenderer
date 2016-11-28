@@ -98,6 +98,7 @@ private:
 	{
 		vkMeshLoader::MeshBuffer m_model;
 		vkMeshLoader::MeshBuffer m_floor;
+		vkMeshLoader::MeshBuffer m_duck;
 		vkMeshLoader::MeshBuffer m_quad;
 	};
 
