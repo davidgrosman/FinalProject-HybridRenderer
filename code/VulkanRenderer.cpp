@@ -281,10 +281,14 @@ void VulkanRenderer::loadMesh(std::string filename, vkMeshLoader::MeshBuffer * m
 	loadMesh(filename, meshBuffer, vertexLayout, &meshCreateInfo);
 }
 
-void VulkanRenderer::loadMesh(std::string filename, vkMeshLoader::MeshBuffer * meshBuffer, std::vector<vkMeshLoader::VertexLayout> vertexLayout, vkMeshLoader::MeshCreateInfo *meshCreateInfo)
+void VulkanRenderer::loadMesh(std::string filename, vkMeshLoader::MeshBuffer * meshBuffer, std::vector<vkMeshLoader::VertexLayout> vertexLayout, vkMeshLoader::MeshCreateInfo *meshCreateInfo, bool isGlTF)
 {
 	VulkanMeshLoader *mesh = new VulkanMeshLoader();
-	mesh->LoadMesh(filename);
+	if (isGlTF) {
+		mesh->LoadGLTFMesh(filename);
+	} else {
+		mesh->LoadMesh(filename);
+	}
 	
 
 	VkCommandBuffer copyCmd = VulkanRenderer::createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, false);
@@ -339,7 +343,7 @@ void VulkanRenderer::initVulkan(SRendererContext& context, bool enableValidation
 	{
 		// The report flags determine what type of messages for the layers will be displayed
 		// For validating (debugging) an appplication the error and warning bits should suffice
-		VkDebugReportFlagsEXT debugReportFlags = VK_DEBUG_REPORT_ERROR_BIT_EXT; // | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+		VkDebugReportFlagsEXT debugReportFlags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
 		// Additional flags include performance info, loader and layer debug messages, etc.
 		vkDebug::initDebugCallback(m_instance, debugReportFlags, VK_NULL_HANDLE);
 	}

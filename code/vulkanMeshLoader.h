@@ -51,6 +51,8 @@ This code is licensed under the MIT license (MIT) (http://opensource.org/license
 
 namespace vkMeshLoader
 {
+	typedef unsigned char Byte;
+
 	typedef enum VertexLayout {
 		VERTEX_LAYOUT_POSITION = 0x0,
 		VERTEX_LAYOUT_NORMAL = 0x1,
@@ -119,6 +121,52 @@ namespace vkMeshLoader
 		glm::vec3 scale;
 		glm::vec2 uvscale;
 	};
+
+	// ---------
+	// VERTEX
+	// ----------
+
+	typedef enum
+	{
+		INDEX,
+		POSITION,
+		NORMAL,
+		TEXCOORD
+	} EVertexAttributeType;
+
+	typedef struct VertexAttributeInfoTyp
+	{
+		size_t byteStride;
+		size_t count;
+		int componentLength;
+		int componentTypeByteSize;
+
+	} VertexAttributeInfo;
+
+	// ---------
+	// GEOMETRY
+	// ----------
+
+	struct GLTFMeshData
+	{
+		std::map<EVertexAttributeType, std::vector<Byte>> vertexData;
+		std::map<EVertexAttributeType, VertexAttributeInfo> vertexAttributes;
+	};
+
+	// ---------
+	// MATERIAL
+	// ----------
+
+	typedef struct MaterialTyp
+	{
+		glm::vec4 diffuse;
+		glm::vec4 ambient;
+		glm::vec4 emission;
+		glm::vec4 specular;
+		float shininess;
+		float transparency;
+		glm::ivec2 _pad;
+	} GLTFMaterial;
 }
 
 // Simple mesh class for getting all the necessary stuff from models loaded via ASSIMP
@@ -134,6 +182,7 @@ public:
 	~VulkanMeshLoader();
 
 	bool LoadMesh(const std::string& filename, int flags = defaultFlags);
+	void LoadGLTFMesh(const std::string& filename);
 	void InitMesh(MeshEntry* meshEntry, const aiMesh* paiMesh, const aiScene* pScene);
 
 private:
@@ -185,6 +234,13 @@ public:
 
 	Assimp::Importer Importer;
 	const aiScene* pScene;
+
+	// For gltf mesh
+	std::vector<vkMeshLoader::GLTFMeshData*> meshesData;
+	std::vector<vkMeshLoader::GLTFMaterial> materials;
+	std::vector<glm::ivec4> indices;
+	std::vector<glm::vec4> verticePositions;
+	std::vector<glm::vec4> verticeNormals;
 
 	void createBuffers( vk::VulkanDevice* vkDevice,
 		vkMeshLoader::MeshBuffer* meshBuffer,
