@@ -70,7 +70,10 @@ _Notice the shadow from the light source onto the ground caused by using light f
 
 - **Fixing bugs**: There will likely still be polishing work that can be done here.
 
-- **Optimization**: If time permitted, we would like to add an accelaration data structure to speed up the raytracing component. Additionally, async compute could be something worth investigating to perhaps progressively update frames when camera not moving. 
+- **Optimization**: If time permitted, we would like to add:
+ 1. Accelaration data structure to speed up raytracing
+ 2. Caching VkPipeline objects into files
+ 3. Additionally, async compute could be something worth investigating to perhaps progressively update frames when camera not moving. 
 
  
 # Build
