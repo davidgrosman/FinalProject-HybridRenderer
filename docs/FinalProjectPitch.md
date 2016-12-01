@@ -1,5 +1,4 @@
-# University of Pennsylvania, CIS 565: GPU Programming and Architecture.
-Final Project: Hybrid Ray-Raster Renderer in Vulkan
+# Final Project: Hybrid Ray-Raster Renderer in Vulkan
 ===============
 
 ## Team members
@@ -27,7 +26,7 @@ As the end result, we would like to demonstrate both of the above bullet points 
 
 Part of the goal for this project is also to learn about explicit graphics API for rendering.
 
-![A](TLVulkanRenderer/images/DefRayTracing.png)
+![](http://blog.imgtec.com/wp-content/uploads/2014/03/08_Ray-tracing-in-games_Hybrid-rendering-in-a-game-engine.png)
 _Image taken from [Practical techniques for ray-tracing in games](http://www.gamasutra.com/blogs/AlexandruVoica/20140318/213148/Practical_techniques_for_ray_tracing_in_games.php)_
  
  
