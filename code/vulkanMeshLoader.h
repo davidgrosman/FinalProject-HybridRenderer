@@ -43,6 +43,7 @@ This code is licensed under the MIT license (MIT) (http://opensource.org/license
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #if defined(__ANDROID__)
@@ -117,9 +118,17 @@ namespace vkMeshLoader
 	/** @brief Holds parameters for mesh creation */
 	struct MeshCreateInfo
 	{
-		glm::vec3 center;
-		glm::vec3 scale;
-		glm::vec2 uvscale;
+		MeshCreateInfo()
+		: m_pos(0.0f)
+		, m_rotAxisAndAngle(1.0f, 0.0f, 0.0f, 0.0f)
+		, m_scale(1.0f)
+		, m_uvscale(1.0f)
+		{}
+
+		glm::vec3 m_pos;
+		glm::vec4 m_rotAxisAndAngle;
+		glm::vec3 m_scale;
+		glm::vec2 m_uvscale;
 	};
 
 	// ---------
@@ -182,10 +191,12 @@ public:
 	~VulkanMeshLoader();
 
 	bool LoadMesh(const std::string& filename, int flags = defaultFlags);
-	void LoadGLTFMesh(const std::string& filename);
-	void InitMesh(MeshEntry* meshEntry, const aiMesh* paiMesh, const aiScene* pScene);
+	bool LoadGLTFMesh(const std::string& filename);
+	
 
 private:
+
+	void InitMesh(MeshEntry* meshEntry, const aiMesh* paiMesh, const aiScene* pScene);
 
 	static const int defaultFlags = aiProcess_FlipWindingOrder | aiProcess_Triangulate | aiProcess_PreTransformVertices | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals;
 

@@ -116,9 +116,9 @@
             "technique": "technique0",
             "values": {
                 "ambient": [
-                    0.1,
-                    0.1,
-                    0.1,
+                    0,
+                    0,
+                    0,
                     1
                 ],
                 "diffuse": "texture_file2",
@@ -130,9 +130,9 @@
                 ],
                 "shininess": 38.4,
                 "specular": [
-                    1,
-                    1,
-                    1,
+                    0,
+                    0,
+                    0,
                     1
                 ]
             }

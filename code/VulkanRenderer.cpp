@@ -272,24 +272,10 @@ VkBool32 VulkanRenderer::createBuffer(VkBufferUsageFlags usageFlags, VkDeviceSiz
 	}
 }
 
-void VulkanRenderer::loadMesh(std::string filename, vkMeshLoader::MeshBuffer * meshBuffer, std::vector<vkMeshLoader::VertexLayout> vertexLayout, float scale)
-{
-	vkMeshLoader::MeshCreateInfo meshCreateInfo;
-	meshCreateInfo.scale = glm::vec3(scale);
-	meshCreateInfo.center = glm::vec3(0.0f);
-	meshCreateInfo.uvscale = glm::vec2(1.0f);
-	loadMesh(filename, meshBuffer, vertexLayout, &meshCreateInfo);
-}
-
-void VulkanRenderer::loadMesh(std::string filename, vkMeshLoader::MeshBuffer * meshBuffer, std::vector<vkMeshLoader::VertexLayout> vertexLayout, vkMeshLoader::MeshCreateInfo *meshCreateInfo, bool isGlTF)
+void VulkanRenderer::loadMesh(std::string filename, vkMeshLoader::MeshBuffer * meshBuffer, std::vector<vkMeshLoader::VertexLayout> vertexLayout, vkMeshLoader::MeshCreateInfo *meshCreateInfo)
 {
 	VulkanMeshLoader *mesh = new VulkanMeshLoader();
-	if (isGlTF) {
-		mesh->LoadGLTFMesh(filename);
-	} else {
-		mesh->LoadMesh(filename);
-	}
-	
+	mesh->LoadMesh(filename);
 
 	VkCommandBuffer copyCmd = VulkanRenderer::createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, false);
 
