@@ -507,15 +507,7 @@ void VulkanDeferredRenderer::buildCommandBuffers()
 
 void VulkanDeferredRenderer::loadMeshes()
 {
-	loadMesh(getAssetPath() + "models/crytek-sponza/crytek-sponza.dae", &m_sceneMeshes.m_model, vertexLayout, 1.0f);
-
-	vkMeshLoader::MeshCreateInfo meshCreateInfo;
-	meshCreateInfo.scale = glm::vec3(2.0f);
-	meshCreateInfo.uvscale = glm::vec2(4.0f);
-	meshCreateInfo.center = glm::vec3(0.0f, 2.35f, 0.0f);
-	loadMesh(getAssetPath() + "models/plane.obj", &m_sceneMeshes.m_floor, vertexLayout, &meshCreateInfo);
-	
-	loadMesh(getAssetPath() + "models/gltfs/box/box.gltf", &m_sceneMeshes.m_duck, vertexLayout, &meshCreateInfo, true);
+	loadMesh(getAssetPath() + "models/armor/armor.dae", &m_sceneMeshes.m_model, vertexLayout, 1.0f);
 }
 
 void VulkanDeferredRenderer::generateQuads()

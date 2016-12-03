@@ -27,6 +27,7 @@ This code is licensed under the MIT license (MIT) (http://opensource.org/license
 
 #include "GfxScene.h"
 #include "VulkanDeferredRenderer.h"
+#include "VulkanRaytracer.h"
 
 //------------------------------
 //-------GLFW CALLBACKS---------
@@ -52,7 +53,7 @@ public:
 
 	SSceneAttributes m_sceneAttributes;
 	SRendererContext m_context;
-	VulkanDeferredRenderer* m_renderer;
+	VulkanRenderer* m_renderer;
 };
 static CSceneRenderApp* pScene = NULL;
 
@@ -136,7 +137,7 @@ CSceneRenderApp::CSceneRenderApp(int width, int height/*, const std::string& sce
 
 	//generateSceneAttributes(sceneFilename, m_sceneAttributes);
 	
-	m_renderer = new VulkanDeferredRenderer();
+	m_renderer = new VulkanRaytracer();
 	m_renderer->initVulkan(m_context, true);
 
 	pScene = this;
