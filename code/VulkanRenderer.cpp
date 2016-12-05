@@ -592,6 +592,16 @@ void VulkanRenderer::buildCommandBuffers()
 	// Can be overriden in derived class
 }
 
+void VulkanRenderer::prepareFrame() {
+
+	VK_CHECK_RESULT(m_swapChain.acquireNextImage(m_semaphores.m_presentComplete, &m_currentBuffer));
+}
+
+void VulkanRenderer::submitFrame() {
+	VK_CHECK_RESULT(m_swapChain.queuePresent(m_queue, m_currentBuffer, m_semaphores.m_renderComplete));
+	VK_CHECK_RESULT(vkQueueWaitIdle(m_queue));
+}
+
 void VulkanRenderer::createCommandPool()
 {
 	VkCommandPoolCreateInfo cmdPoolInfo = {};

@@ -58,6 +58,7 @@ struct SMaterial
 	glm::vec4	m_specular;
 	float		m_shininess;
 	float		m_transparency;
+	glm::ivec2  _pad;
 };
 
 struct SSceneAttributes

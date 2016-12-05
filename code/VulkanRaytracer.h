@@ -70,6 +70,12 @@ private:
 		VkDescriptorSet m_graphics;
 	};
 
+	struct SVkDescriptorSetLayouts
+	{
+		VkDescriptorSetLayout m_compute;
+		VkDescriptorSetLayout m_graphics;
+	};
+
 	struct SVkPipelinesLayout
 	{
 		VkPipelineLayout m_graphics;
@@ -84,8 +90,10 @@ private:
 
 private:
 
+	void prepareResources();
 	void generateQuad();
 	void loadMeshes();
+	void prepareTextureTarget(vkUtils::VulkanTexture *tex, uint32_t width, uint32_t height, VkFormat format);
 
 	void buildRaytracingCommandBuffer();
 
@@ -93,7 +101,7 @@ private:
 	SVkVertices				m_vertices;
 	SSceneMeshes			m_sceneMeshes;
 
-	VkDescriptorSetLayout	m_descriptorSetLayout;
+	SVkDescriptorSetLayouts	m_descriptorSetLayouts;
 	SVkDescriptorSets		m_descriptorSets;
 
 	SVkPipelines			m_pipelines;
@@ -106,11 +114,7 @@ private:
 		VkQueue queue;
 		VkFence fence;
 
-		// -- Pipeline
-		VkPipelineLayout pipelineLayout;
-
 		// -- Commands
-		VkCommandPool commandPool;
 		VkCommandBuffer commandBuffer;
 
 		struct {
@@ -119,7 +123,9 @@ private:
 			vkUtils::UniformData materials;
 
 			// -- Shapes buffers
-			vk::Buffer meshes;
+			vk::Buffer indices;
+			vk::Buffer positions;
+			vk::Buffer normals;
 
 		} buffers;
 
