@@ -65,6 +65,9 @@ struct SSceneAttributes
 {
 	std::vector<SGeometryAttributes> m_geometriesData;
 	std::vector<SMaterial> m_materials;
+	std::vector<glm::ivec4> m_indices; // The fourth element of indices is used as material IDs
+	std::vector<glm::vec4> m_verticePositions;
+	std::vector<glm::vec4> m_verticeNormals;
 };
 
 extern void generateSceneAttributes(const std::string& fileName, SSceneAttributes& outScene);

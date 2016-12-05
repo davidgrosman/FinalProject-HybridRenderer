@@ -21,5 +21,5 @@ This code is licensed under the MIT license (MIT) (http://opensource.org/license
 int main(int argc, char **argv) 
 {
 	// Launch our application using the Vulkan API
-	CApplication::LaunchApplication(argc, argv, 800, 600);
+	CApplication::LaunchApplication(argc, argv, 800, 800);
 }

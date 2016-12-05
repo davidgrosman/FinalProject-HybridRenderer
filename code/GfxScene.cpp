@@ -1000,7 +1000,7 @@ void generateSceneAttributes(const std::string& fileName, SSceneAttributes& outS
 		const tinygltf::Node& node = scene.nodes.at(nodeString.first);
 		const glm::mat4 & matrix = nodeString.second;
 		const glm::mat3 & matrixNormal = glm::transpose(glm::inverse(glm::mat3(matrix)));
-
+		int materialId = 0;
 		for (auto& meshName : node.meshes)
 		{
 			auto& mesh = scene.meshes.at(meshName);
@@ -1040,6 +1040,12 @@ void generateSceneAttributes(const std::string& fileName, SSceneAttributes& outS
 					};
 					geom.m_vertexAttributes.insert(std::make_pair(EVertexAttributeType::INDEX, attributeInfo));
 					geom.m_vertexData.insert(std::make_pair(EVertexAttributeType::INDEX, data));
+
+					int indicesCount = indexAccessor.count;
+					uint16_t* in = reinterpret_cast<uint16_t*>(data.data());
+					for (auto iCount = 0; iCount < indicesCount; iCount += 3) {
+						outScene.m_indices.push_back(glm::ivec4(in[iCount], in[iCount + 1], in[iCount + 2], materialId));
+					}
 				}
 
 				// -------- Attributes -----------
@@ -1073,6 +1079,7 @@ void generateSceneAttributes(const std::string& fileName, SSceneAttributes& outS
 						for (auto p = 0; p < positionCount; ++p)
 						{
 							positions[p] = matrix * glm::vec4(positions[p], 1.0f);
+							outScene.m_verticePositions.push_back(glm::vec4(positions[p], 1.0f));
 						}
 					}
 
@@ -1086,6 +1093,7 @@ void generateSceneAttributes(const std::string& fileName, SSceneAttributes& outS
 						for (auto p = 0; p < normalCount; ++p)
 						{
 							normals[p] = glm::normalize(matrixNormal * glm::vec4(normals[p], 1.0f));
+							outScene.m_verticeNormals.push_back(glm::vec4(normals[p], 0.0f));
 						}
 					}
 
@@ -1171,7 +1179,7 @@ void generateSceneAttributes(const std::string& fileName, SSceneAttributes& outS
 						}
 
 						outScene.m_materials.push_back(material);
-						//++materialId;
+						++materialId;
 					}
 				}
 			}

@@ -51,19 +51,6 @@ public:
 	void viewChanged(SRendererContext& context) override;
 
 private:
-	struct SVkVertices
-	{
-		VkPipelineVertexInputStateCreateInfo			m_inputState;
-		std::vector<VkVertexInputBindingDescription>	m_bindingDescriptions;
-		std::vector<VkVertexInputAttributeDescription>	m_attributeDescriptions;
-	};
-
-	struct SSceneMeshes
-	{
-		vkMeshLoader::MeshBuffer m_model;
-		vkMeshLoader::MeshBuffer m_quad;
-	};
-
 	struct SVkDescriptorSets
 	{
 		VkDescriptorSet m_compute;
@@ -98,16 +85,13 @@ private:
 	void buildRaytracingCommandBuffer();
 
 private:
-	SVkVertices				m_vertices;
-	SSceneMeshes			m_sceneMeshes;
+	SSceneAttributes		m_sceneAttributes;
 
 	SVkDescriptorSetLayouts	m_descriptorSetLayouts;
 	SVkDescriptorSets		m_descriptorSets;
 
 	SVkPipelines			m_pipelines;
 	SVkPipelinesLayout		m_pipelineLayouts;
-
-
 
 	struct Compute {
 		// -- Compute compatible queue
@@ -134,9 +118,9 @@ private:
 
 		// -- Uniforms
 		struct CameraUniform { // Compute shader uniform block object
-			glm::vec4 position = glm::vec4(0.0, 0.0f, 15.0f, 1.0f);
+			glm::vec4 position = glm::vec4(0.0, 2.5f, 10.0f, 1.0f);
 			glm::vec4 right = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);;
-			glm::vec4 lookat = glm::vec4(0.0, 0.0f, 0.0f, 0.0f);
+			glm::vec4 lookat = glm::vec4(0.0, 2.5f, 0.0f, 0.0f);
 			glm::vec4 forward;
 			glm::vec4 up = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
 			glm::vec2 pixelLength;

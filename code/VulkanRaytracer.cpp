@@ -2,15 +2,6 @@
 #include "Utilities.h"
 #include "VulkanDeferredRenderer.h"
 
-namespace
-{
-	static std::vector<vkMeshLoader::VertexLayout> vertexLayout =
-	{
-		vkMeshLoader::VERTEX_LAYOUT_POSITION,
-		vkMeshLoader::VERTEX_LAYOUT_UV,
-	};
-}
-
 VulkanRaytracer::VulkanRaytracer() : VulkanRenderer()
 {
 	m_appName = "Raytracer Renderer";
@@ -56,8 +47,6 @@ void VulkanRaytracer::shutdownVulkan()
 	vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.m_compute, nullptr);
 
 	// Meshes
-	VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_model);
-	VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_quad);
 	vkDestroyBuffer(m_device, m_compute.buffers.indices.buffer, nullptr);
 	vkDestroyBuffer(m_device, m_compute.buffers.positions.buffer, nullptr);
 	vkDestroyBuffer(m_device, m_compute.buffers.normals.buffer, nullptr);
@@ -77,6 +66,9 @@ void VulkanRaytracer::shutdownVulkan()
 }
 
 void VulkanRaytracer::setupUniformBuffers(SRendererContext& context) {
+
+	prepareResources();
+
 	// Initialize camera's ubo
 	//calculate fov based on resolution
 	float aspectRatio = m_windowWidth / m_windowHeight;
@@ -101,20 +93,12 @@ void VulkanRaytracer::setupUniformBuffers(SRendererContext& context) {
 		&m_compute.buffers.camera.descriptor);
 
 	// ====== MATERIALS
-	SMaterial material;
-	material.m_diffuse = glm::vec4(1, 1, 0, 1);
-	material.m_ambient = glm::vec4(0.1, 0.1, .1, 1);
-	material.m_emission = glm::vec4(1, 0, 0, 1);
-	material.m_specular = glm::vec4(0, 0, 0, 1);
-	material.m_shininess = 0;
-	material.m_transparency = 0;
-
-	bufferSize = sizeof(SMaterial);
+	bufferSize = sizeof(SMaterial) * m_sceneAttributes.m_materials.size();
 	createBuffer(
 		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 		bufferSize,
-		&material,
+		m_sceneAttributes.m_materials.data(),
 		&m_compute.buffers.materials.buffer,
 		&m_compute.buffers.materials.memory,
 		&m_compute.buffers.materials.descriptor);
@@ -122,8 +106,6 @@ void VulkanRaytracer::setupUniformBuffers(SRendererContext& context) {
 
 void VulkanRaytracer::setupDescriptorFramework()
 {
-	prepareResources();
-
 	// Set-up descriptor pool
 	std::vector<VkDescriptorPoolSize> poolSizes =
 	{
@@ -223,9 +205,6 @@ void VulkanRaytracer::setupDescriptorFramework()
 
 void VulkanRaytracer::setupDescriptors()
 {
-	generateQuad();
-	loadMeshes();
-
 	std::vector<VkWriteDescriptorSet> writeDescriptorSets;
 
 	// Textured quad descriptor set
@@ -305,38 +284,6 @@ void VulkanRaytracer::setupDescriptors()
 	};
 
 	vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
-
-	// ==== Quad vertices
-	// Binding description
-	m_vertices.m_bindingDescriptions.resize(1);
-	m_vertices.m_bindingDescriptions[0] =
-		vkUtils::initializers::vertexInputBindingDescription(
-		VERTEX_BUFFER_BIND_ID,
-		vkMeshLoader::vertexSize(vertexLayout),
-		VK_VERTEX_INPUT_RATE_VERTEX);
-
-	// Attribute descriptions
-	m_vertices.m_attributeDescriptions.resize(5);
-	// Location 0: Position
-	m_vertices.m_attributeDescriptions[0] =
-		vkUtils::initializers::vertexInputAttributeDescription(
-		VERTEX_BUFFER_BIND_ID,
-		0,
-		VK_FORMAT_R32G32B32_SFLOAT,
-		0);
-	// Location 1: Texture coordinates
-	m_vertices.m_attributeDescriptions[1] =
-		vkUtils::initializers::vertexInputAttributeDescription(
-		VERTEX_BUFFER_BIND_ID,
-		1,
-		VK_FORMAT_R32G32_SFLOAT,
-		sizeof(float) * 3);
-
-	m_vertices.m_inputState = vkUtils::initializers::pipelineVertexInputStateCreateInfo();
-	m_vertices.m_inputState.vertexBindingDescriptionCount = static_cast<uint32_t>(m_vertices.m_bindingDescriptions.size());
-	m_vertices.m_inputState.pVertexBindingDescriptions = m_vertices.m_bindingDescriptions.data();
-	m_vertices.m_inputState.vertexAttributeDescriptionCount = static_cast<uint32_t>(m_vertices.m_attributeDescriptions.size());
-	m_vertices.m_inputState.pVertexAttributeDescriptions = m_vertices.m_attributeDescriptions.data();
 }
 
 void VulkanRaytracer::setupPipelines() {
@@ -513,6 +460,8 @@ void VulkanRaytracer::viewChanged(SRendererContext& context) {
 
 void VulkanRaytracer::prepareResources() {
 	
+	loadMeshes();
+
 	// Get a graphics queue from the device
 	vkGetDeviceQueue(m_device, m_vulkanDevice->queueFamilyIndices.compute, 0, &m_compute.queue);
 
@@ -526,13 +475,14 @@ void VulkanRaytracer::prepareResources() {
 	vk::Buffer stagingBuffer;
 
 	// --  Index buffer
-	VkDeviceSize bufferSize = indices.size() * sizeof(glm::ivec4);
+	VkDeviceSize bufferSize = m_sceneAttributes.m_indices.size() * sizeof(glm::ivec4);
+	bufferSize = 1000 * sizeof(glm::ivec4);
 
 	createBuffer(
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 		bufferSize,
-		indices.data(),
+		m_sceneAttributes.m_indices.data(),
 		&stagingBuffer.buffer,
 		&stagingBuffer.memory,
 		&stagingBuffer.descriptor);
@@ -563,13 +513,14 @@ void VulkanRaytracer::prepareResources() {
 		glm::vec4(0.0f, 1.0f, 0.0f, 1.0f),
 		glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)
 	};
-	bufferSize = positions.size() * sizeof(glm::vec4);
+	bufferSize = m_sceneAttributes.m_verticePositions.size() * sizeof(glm::vec4);
+	//bufferSize = 3 * sizeof(glm::vec4);
 
 	createBuffer(
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 		bufferSize,
-		positions.data(),
+		m_sceneAttributes.m_verticePositions.data(),
 		&stagingBuffer.buffer,
 		&stagingBuffer.memory,
 		&stagingBuffer.descriptor);
@@ -601,13 +552,14 @@ void VulkanRaytracer::prepareResources() {
 		glm::vec4(0.0f, 0.0f, 1.0f, 1.0f)
 	};	
 	
-	bufferSize = normals.size() * sizeof(glm::vec4);
+	bufferSize = m_sceneAttributes.m_verticeNormals.size() * sizeof(glm::vec4);
+	//bufferSize = 3 * sizeof(glm::vec4);
 
 	createBuffer(
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 		bufferSize,
-		normals.data(),
+		m_sceneAttributes.m_verticeNormals.data(),
 		&stagingBuffer.buffer,
 		&stagingBuffer.memory,
 		&stagingBuffer.descriptor);
@@ -632,46 +584,9 @@ void VulkanRaytracer::prepareResources() {
 	vkFreeMemory(m_device, stagingBuffer.memory, nullptr);
 }
 
-void VulkanRaytracer::generateQuad() {
-
-	struct Vertex {
-		float pos[3];
-		float uv[2];
-	};
-
-	std::vector<Vertex> vertexBuffer;
-
-	float x = 0.0f;
-	float y = 0.0f;
-
-	vertexBuffer.push_back({ { x + 1.0f, y + 1.0f, 0.0f }, { 1.0f, 1.0f }});
-	vertexBuffer.push_back({ { x, y + 1.0f, 0.0f }, { 0.0f, 1.0f }});
-	vertexBuffer.push_back({ { x, y, 0.0f }, { 0.0f, 0.0f }});
-	vertexBuffer.push_back({ { x + 1.0f, y, 0.0f }, { 1.0f, 0.0f }});
-
-	createBuffer(
-		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-		vertexBuffer.size() * sizeof(Vertex),
-		vertexBuffer.data(),
-		&m_sceneMeshes.m_quad.vertices.buf,
-		&m_sceneMeshes.m_quad.vertices.mem);
-
-	// Setup indices
-	std::vector<uint16_t> indexBuffer = { 0, 1, 2, 2, 3, 0 };
-
-	createBuffer(
-		VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-		indexBuffer.size() * sizeof(uint16_t),
-		indexBuffer.data(),
-		&m_sceneMeshes.m_quad.indices.buf,
-		&m_sceneMeshes.m_quad.indices.mem);
-
-}
-
-
 void VulkanRaytracer::loadMeshes()
 {
-	loadMesh(getAssetPath() + "models/armor/armor.dae", &m_sceneMeshes.m_model, vertexLayout, 1.0f);
+	generateSceneAttributes(getAssetPath() + "models/gltfs/cornell/cornell.glb", m_sceneAttributes);
 }
 
 // Prepare a texture target that is used to store compute shader calculations
