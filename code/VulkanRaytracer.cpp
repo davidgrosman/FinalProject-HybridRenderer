@@ -21,25 +21,21 @@ VulkanRaytracer::~VulkanRaytracer()
 
 void VulkanRaytracer::draw(SRendererContext& context)
 {
-	m_submitInfo.pWaitSemaphores = &m_semaphores.m_presentComplete;
-	m_submitInfo.pSignalSemaphores = &m_compute.semaphore;
-
-	vkWaitForFences(m_device, 1, &m_compute.fence, VK_TRUE, UINT64_MAX);
-	vkResetFences(m_device, 1, &m_compute.fence);
-
-	// Raytracing
-	m_submitInfo.commandBufferCount = 1;
-	m_submitInfo.pCommandBuffers = &m_compute.commandBuffer;
-	VK_CHECK_RESULT(vkQueueSubmit(m_compute.queue, 1, &m_submitInfo, m_compute.fence));
-
-	m_submitInfo.pWaitSemaphores = &m_compute.semaphore;
-	m_submitInfo.pSignalSemaphores = &m_semaphores.m_renderComplete;
-
-	// Scene rendering
+	// Command buffer to be sumitted to the queue
 	m_submitInfo.commandBufferCount = 1;
 	m_submitInfo.pCommandBuffers = &m_drawCmdBuffers[m_currentBuffer];
 	VK_CHECK_RESULT(vkQueueSubmit(m_queue, 1, &m_submitInfo, VK_NULL_HANDLE));
 
+	// Submit compute commands
+	// Use a fence to ensure that compute command buffer has finished executing before using it again
+	vkWaitForFences(m_device, 1, &m_compute.fence, VK_TRUE, UINT64_MAX);
+	vkResetFences(m_device, 1, &m_compute.fence);
+
+	VkSubmitInfo computeSubmitInfo = vkUtils::initializers::submitInfo();
+	computeSubmitInfo.commandBufferCount = 1;
+	computeSubmitInfo.pCommandBuffers = &m_compute.commandBuffer;
+
+	VK_CHECK_RESULT(vkQueueSubmit(m_compute.queue, 1, &computeSubmitInfo, m_compute.fence));
 }
 
 void VulkanRaytracer::shutdownVulkan()
@@ -62,11 +58,15 @@ void VulkanRaytracer::shutdownVulkan()
 	// Meshes
 	VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_model);
 	VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_quad);
+	vkDestroyBuffer(m_device, m_compute.buffers.indices.buffer, nullptr);
+	vkDestroyBuffer(m_device, m_compute.buffers.positions.buffer, nullptr);
+	vkDestroyBuffer(m_device, m_compute.buffers.normals.buffer, nullptr);
 
 	// Uniform buffers
 	vkUtils::destroyUniformData(m_device, &m_compute.buffers.camera);
 	vkUtils::destroyUniformData(m_device, &m_compute.buffers.materials);
 
+	vkDestroyFence(m_device, m_compute.fence, nullptr);
 	vkFreeCommandBuffers(m_device, m_cmdPool, 1, &m_compute.commandBuffer);
 
 	vkDestroySemaphore(m_device, m_compute.semaphore, nullptr);
@@ -142,7 +142,7 @@ void VulkanRaytracer::setupDescriptorFramework()
 	VK_CHECK_RESULT(vkCreateDescriptorPool(m_device, &descriptorPoolInfo, nullptr, &m_descriptorPool));
 
 	// ==== Graphics descriptor set layout
-	// Binding 6: Fragment shader image sampler
+	// Binding 0: Fragment shader image sampler
 	std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings = {
 		vkUtils::initializers::descriptorSetLayoutBinding(
 		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -342,7 +342,7 @@ void VulkanRaytracer::setupDescriptors()
 void VulkanRaytracer::setupPipelines() {
 	VulkanRenderer::setupPipelines();
 
-	// --- GRAPHICS
+	// ===== GRAPHICS
 	VkPipelineInputAssemblyStateCreateInfo inputAssemblyState =
 		vkUtils::initializers::pipelineInputAssemblyStateCreateInfo(
 		VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
@@ -352,7 +352,7 @@ void VulkanRaytracer::setupPipelines() {
 	VkPipelineRasterizationStateCreateInfo rasterizationState =
 		vkUtils::initializers::pipelineRasterizationStateCreateInfo(
 		VK_POLYGON_MODE_FILL,
-		VK_CULL_MODE_BACK_BIT,
+		VK_CULL_MODE_FRONT_BIT,
 		VK_FRONT_FACE_COUNTER_CLOCKWISE,
 		0);
 
@@ -410,7 +410,6 @@ void VulkanRaytracer::setupPipelines() {
 	emptyInputState.pVertexBindingDescriptions = nullptr;
 	pipelineCreateInfo.pVertexInputState = &emptyInputState;
 
-	pipelineCreateInfo.pVertexInputState = &emptyInputState;
 	pipelineCreateInfo.pInputAssemblyState = &inputAssemblyState;
 	pipelineCreateInfo.pRasterizationState = &rasterizationState;
 	pipelineCreateInfo.pColorBlendState = &colorBlendState;
@@ -420,10 +419,11 @@ void VulkanRaytracer::setupPipelines() {
 	pipelineCreateInfo.pDynamicState = &dynamicState;
 	pipelineCreateInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
 	pipelineCreateInfo.pStages = shaderStages.data();
+	pipelineCreateInfo.renderPass = m_renderPass;
 
 	VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_device, m_pipelineCache, 1, &pipelineCreateInfo, nullptr, &m_pipelines.m_graphics));
 
-	// --- COMPUTE
+	// ===== COMPUTE
 	VkComputePipelineCreateInfo computePipelineCreateInfo = 
 		vkUtils::initializers::computePipelineCreateInfo(
 			m_pipelineLayouts.m_compute, 
@@ -445,7 +445,7 @@ void VulkanRaytracer::buildCommandBuffers() {
 	VkCommandBufferBeginInfo cmdBufInfo = vkUtils::initializers::commandBufferBeginInfo();
 
 	VkClearValue clearValues[2];
-	clearValues[0].color = { { 0.0f, 0.0f, 0.2f, 0.0f } };
+	clearValues[0].color = { { 0.0f, 0.2f, 0.2f, 0.0f } };
 	clearValues[1].depthStencil = { 1.0f, 0 };
 
 	VkRenderPassBeginInfo renderPassBeginInfo = vkUtils::initializers::renderPassBeginInfo();
@@ -477,7 +477,7 @@ void VulkanRaytracer::buildCommandBuffers() {
 			m_drawCmdBuffers[i],
 			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-			0,
+			VK_FLAGS_NONE,
 			0, nullptr,
 			0, nullptr,
 			1, &imageMemoryBarrier);
@@ -492,11 +492,9 @@ void VulkanRaytracer::buildCommandBuffers() {
 		VkRect2D scissor = vkUtils::initializers::rect2D(m_windowWidth, m_windowHeight, 0, 0);
 		vkCmdSetScissor(m_drawCmdBuffers[i], 0, 1, &scissor);
 
-		VkDeviceSize offsets[1] = { 0 };
-		// Record binding the graphics pipeline
-		vkCmdBindPipeline(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.m_graphics);
-
 		vkCmdBindDescriptorSets(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_graphics, 0, 1, &m_descriptorSets.m_graphics, 0, NULL);
+
+		vkCmdBindPipeline(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.m_graphics);
 
 		vkCmdDraw(m_drawCmdBuffers[i], 3, 1, 0, 0);
 		vkCmdEndRenderPass(m_drawCmdBuffers[i]);
@@ -521,8 +519,8 @@ void VulkanRaytracer::prepareResources() {
 	// Setup target compute texture
 	prepareTextureTarget(&m_compute.storageRaytraceImage, TEX_DIM, TEX_DIM, VK_FORMAT_R8G8B8A8_UNORM);
 
-	std::vector<uint16_t> indices = {
-		0, 1, 2 
+	std::vector<glm::ivec4> indices = {
+		glm::ivec4(0, 1, 2, 0) 
 	};
 
 	vk::Buffer stagingBuffer;
@@ -555,12 +553,15 @@ void VulkanRaytracer::prepareResources() {
 	vkCmdCopyBuffer(copyCmd, stagingBuffer.buffer, m_compute.buffers.indices.buffer, 1, &copyRegion);
 	flushCommandBuffer(copyCmd, m_compute.queue, true);
 
+	vkDestroyBuffer(m_device, stagingBuffer.buffer, nullptr);
+	vkFreeMemory(m_device, stagingBuffer.memory, nullptr);
+
 
 	// --  Positions buffer
 	std::vector<glm::vec4> positions = {
 		glm::vec4(-1.0f, 0.0f, 0.0f, 1.0f),
-		glm::vec4(1.0f, 0.0f, 0.0f, 1.0f),
-		glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)
+		glm::vec4(0.0f, 1.0f, 0.0f, 1.0f),
+		glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)
 	};
 	bufferSize = positions.size() * sizeof(glm::vec4);
 
@@ -568,7 +569,7 @@ void VulkanRaytracer::prepareResources() {
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 		bufferSize,
-		indices.data(),
+		positions.data(),
 		&stagingBuffer.buffer,
 		&stagingBuffer.memory,
 		&stagingBuffer.descriptor);
@@ -589,7 +590,9 @@ void VulkanRaytracer::prepareResources() {
 	vkCmdCopyBuffer(copyPositionsCmd, stagingBuffer.buffer, m_compute.buffers.positions.buffer, 1, &copyRegion);
 	flushCommandBuffer(copyPositionsCmd, m_compute.queue, true);
 
-	//stagingBuffer.destroy();
+	vkDestroyBuffer(m_device, stagingBuffer.buffer, nullptr);
+	vkFreeMemory(m_device, stagingBuffer.memory, nullptr);
+
 
 	// --  Normals buffer
 	std::vector<glm::vec4> normals = {
@@ -604,7 +607,7 @@ void VulkanRaytracer::prepareResources() {
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 		bufferSize,
-		indices.data(),
+		normals.data(),
 		&stagingBuffer.buffer,
 		&stagingBuffer.memory,
 		&stagingBuffer.descriptor);
@@ -625,8 +628,8 @@ void VulkanRaytracer::prepareResources() {
 	vkCmdCopyBuffer(copyNormalsCmd, stagingBuffer.buffer, m_compute.buffers.normals.buffer, 1, &copyRegion);
 	flushCommandBuffer(copyNormalsCmd, m_compute.queue, true);
 
-	//stagingBuffer.destroy();
-
+	vkDestroyBuffer(m_device, stagingBuffer.buffer, nullptr);
+	vkFreeMemory(m_device, stagingBuffer.memory, nullptr);
 }
 
 void VulkanRaytracer::generateQuad() {

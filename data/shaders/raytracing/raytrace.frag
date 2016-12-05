@@ -1,3 +1,5 @@
+// Based on Sascha Willems example: https://github.com/SaschaWillems/Vulkan/tree/master/data/shaders/raytracing
+
 #version 450
 
 #extension GL_ARB_separate_shader_objects : enable
@@ -12,5 +14,4 @@ layout (location = 0) out vec4 outFragColor;
 void main() 
 {
   outFragColor = texture(samplerColor, vec2(inUV.s, 1.0 - inUV.t));
-  outFragColor = vec4(1, 0, 0, 1);
 }

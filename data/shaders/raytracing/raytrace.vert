@@ -1,3 +1,5 @@
+// Based on Sascha Willems example: https://github.com/SaschaWillems/Vulkan/tree/master/data/shaders/raytracing
+
 #version 450
 
 #extension GL_ARB_separate_shader_objects : enable
