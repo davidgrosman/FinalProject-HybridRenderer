@@ -28,6 +28,7 @@ This code is licensed under the MIT license (MIT) (http://opensource.org/license
 #include "GfxScene.h"
 #include "VulkanDeferredRenderer.h"
 #include "VulkanRaytracer.h"
+#include "VulkanHybridRenderer.h"
 
 //------------------------------
 //-------GLFW CALLBACKS---------
@@ -51,7 +52,6 @@ public:
 
 public:
 
-	SSceneAttributes m_sceneAttributes;
 	SRendererContext m_context;
 	VulkanRenderer* m_renderer;
 };
@@ -114,7 +114,7 @@ void CApplication::Run() {
 			start = now;
 		}
 
-		std::string title = "Vulkan Rasterizer | " + std::to_string(m_fps) + " FPS | " + std::to_string(timeElapsedInMs) + " ms";
+		std::string title = "Vulkan Hybrid Renderer | " + std::to_string(m_fps) + " FPS | " + std::to_string(timeElapsedInMs) + " ms";
 		glfwSetWindowTitle(m_window, title.c_str());
 
 		float timeElapsedInS = timeElapsedInMs / 1000.0f;
@@ -137,7 +137,7 @@ CSceneRenderApp::CSceneRenderApp(int width, int height/*, const std::string& sce
 
 	//generateSceneAttributes(sceneFilename, m_sceneAttributes);
 	
-	m_renderer = new VulkanRaytracer();
+	m_renderer = new VulkanHybridRenderer();
 	m_renderer->initVulkan(m_context, true);
 
 	pScene = this;

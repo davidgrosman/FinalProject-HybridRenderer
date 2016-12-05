@@ -36,6 +36,11 @@ This code is licensed under the MIT license (MIT) (http://opensource.org/license
 #include "vulkanMeshLoader.h"
 #include "Utilities.h"
 
+enum ERenderingMode {
+	DEFERRED,
+	RAYTRACING,
+	DEFFERRED_RAYTRACING
+};
 
 class VulkanRenderer
 {

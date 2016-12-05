@@ -1,21 +1,4 @@
-/******************************************************************************/
-/*!
-\file	VulkanDeferredRenderer.cpp
-\author David Grosman
-\par    email: ToDavidGrosman\@gmail.com
-\par    Project: CIS 565: GPU Programming and Architecture - Final Project.
-\date   11/18/2016
-\brief
-
-Compiled using Microsoft (R) C/C++ Optimizing Compiler Version 18.00.21005.1 for
-x86 which is my default VS2013 compiler.
-
-This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
-
-*/
-/******************************************************************************/
-
-#include "VulkanDeferredRenderer.h"
+#include "VulkanHybridRenderer.h"
 
 namespace
 {
@@ -33,17 +16,17 @@ namespace
 
 
 
-VulkanDeferredRenderer::VulkanDeferredRenderer() : VulkanRenderer()
-	, m_offScreenCmdBuffer(VK_NULL_HANDLE)
-	, m_offscreenSemaphore(VK_NULL_HANDLE)
+VulkanHybridRenderer::VulkanHybridRenderer() : VulkanRenderer()
+, m_offScreenCmdBuffer(VK_NULL_HANDLE)
+, m_offscreenSemaphore(VK_NULL_HANDLE)
 {
 	m_appName = "Deferred Renderer";
 }
 
-VulkanDeferredRenderer::~VulkanDeferredRenderer()
+VulkanHybridRenderer::~VulkanHybridRenderer()
 {}
 
-void VulkanDeferredRenderer::draw(SRendererContext& context)
+void VulkanHybridRenderer::draw(SRendererContext& context)
 {
 	// The scene render command buffer has to wait for the offscreen
 	// rendering to be finished before we can use the framebuffer 
@@ -81,7 +64,7 @@ void VulkanDeferredRenderer::draw(SRendererContext& context)
 	updateUniformBufferDeferredLights(context);
 }
 
-void VulkanDeferredRenderer::shutdownVulkan()
+void VulkanHybridRenderer::shutdownVulkan()
 {
 	// Flush device to make sure all resources can be freed 
 	vkDeviceWaitIdle(m_device);
@@ -113,14 +96,16 @@ void VulkanDeferredRenderer::shutdownVulkan()
 
 	vkDestroyFramebuffer(m_device, m_offScreenFrameBuf.frameBuffer, nullptr);
 
-	vkDestroyPipeline(m_device, m_pipelines.m_deferred, nullptr);
+	vkDestroyPipeline(m_device, m_pipelines.m_onscreen, nullptr);
 	vkDestroyPipeline(m_device, m_pipelines.m_offscreen, nullptr);
 	vkDestroyPipeline(m_device, m_pipelines.m_debug, nullptr);
 
-	vkDestroyPipelineLayout(m_device, m_pipelineLayouts.m_deferred, nullptr);
+	vkDestroyPipelineLayout(m_device, m_pipelineLayouts.m_onscreen, nullptr);
 	vkDestroyPipelineLayout(m_device, m_pipelineLayouts.m_offscreen, nullptr);
+	vkDestroyPipelineLayout(m_device, m_pipelineLayouts.m_raytrace, nullptr);
 
-	vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayout, nullptr);
+	vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.m_raster, nullptr);
+	vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.m_raytrace, nullptr);
 
 	// Meshes
 	VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_model);
@@ -147,7 +132,7 @@ void VulkanDeferredRenderer::shutdownVulkan()
 }
 
 // Create a frame buffer attachment
-void VulkanDeferredRenderer::createAttachment(
+void VulkanHybridRenderer::createAttachment(
 	VkFormat format,
 	VkImageUsageFlagBits usage,
 	SFrameBufferAttachment *attachment,
@@ -209,7 +194,7 @@ void VulkanDeferredRenderer::createAttachment(
 // Prepare a new framebuffer for offscreen rendering
 // The contents of this framebuffer are then
 // blitted to our render target
-void VulkanDeferredRenderer::setupFrameBuffer() // prepareOffscreenFramebuffer
+void VulkanHybridRenderer::setupFrameBuffer() // prepareOffscreenFramebuffer
 {
 	VulkanRenderer::setupFrameBuffer();
 
@@ -366,7 +351,7 @@ void VulkanDeferredRenderer::setupFrameBuffer() // prepareOffscreenFramebuffer
 }
 
 // Build command buffer for rendering the scene to the offscreen frame buffer attachments
-void VulkanDeferredRenderer::buildDeferredCommandBuffer()
+void VulkanHybridRenderer::buildDeferredCommandBuffer()
 {
 	if (m_offScreenCmdBuffer == VK_NULL_HANDLE)
 	{
@@ -425,7 +410,7 @@ void VulkanDeferredRenderer::buildDeferredCommandBuffer()
 	VK_CHECK_RESULT(vkEndCommandBuffer(m_offScreenCmdBuffer));
 }
 
-void VulkanDeferredRenderer::loadTextures()
+void VulkanHybridRenderer::loadTextures()
 {
 	m_textureLoader->loadTexture(getAssetPath() + "textures/pattern_35_bc3.ktx", VK_FORMAT_BC3_UNORM_BLOCK, &m_modelTex.m_colorMap);
 	m_textureLoader->loadTexture(getAssetPath() + "textures/pattern_35_normalmap_bc3.ktx", VK_FORMAT_BC3_UNORM_BLOCK, &m_modelTex.m_normalMap);
@@ -434,7 +419,7 @@ void VulkanDeferredRenderer::loadTextures()
 	m_textureLoader->loadTexture(getAssetPath() + "textures/pattern_35_normalmap_bc3.ktx", VK_FORMAT_BC3_UNORM_BLOCK, &m_floorTex.m_normalMap);
 }
 
-void VulkanDeferredRenderer::reBuildCommandBuffers()
+void VulkanHybridRenderer::reBuildCommandBuffers()
 {
 	if (!checkCommandBuffers())
 	{
@@ -444,12 +429,89 @@ void VulkanDeferredRenderer::reBuildCommandBuffers()
 	buildCommandBuffers();
 }
 
-void VulkanDeferredRenderer::buildCommandBuffers()
+void VulkanHybridRenderer::prepareTextureTarget(vkUtils::VulkanTexture* tex, uint32_t width, uint32_t height, VkFormat format) {
+	// Get device properties for the requested texture format
+	VkFormatProperties formatProperties;
+	vkGetPhysicalDeviceFormatProperties(m_physicalDevice, format, &formatProperties);
+	// Check if requested image format supports image storage operations
+	assert(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT);
+
+	// Prepare blit target texture
+	tex->width = width;
+	tex->height = height;
+
+	VkImageCreateInfo imageCreateInfo = vkUtils::initializers::imageCreateInfo();
+	imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+	imageCreateInfo.format = format;
+	imageCreateInfo.extent = { width, height, 1 };
+	imageCreateInfo.mipLevels = 1;
+	imageCreateInfo.arrayLayers = 1;
+	imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+	imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+	imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	// Image will be sampled in the fragment shader and used as storage target in the compute shader
+	imageCreateInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+	imageCreateInfo.flags = 0;
+
+	VkMemoryAllocateInfo memAllocInfo = vkUtils::initializers::memoryAllocateInfo();
+	VkMemoryRequirements memReqs;
+
+	VK_CHECK_RESULT(vkCreateImage(m_device, &imageCreateInfo, nullptr, &tex->image));
+	vkGetImageMemoryRequirements(m_device, tex->image, &memReqs);
+	memAllocInfo.allocationSize = memReqs.size;
+	memAllocInfo.memoryTypeIndex = m_vulkanDevice->getMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	VK_CHECK_RESULT(vkAllocateMemory(m_device, &memAllocInfo, nullptr, &tex->deviceMemory));
+	VK_CHECK_RESULT(vkBindImageMemory(m_device, tex->image, tex->deviceMemory, 0));
+
+	VkCommandBuffer layoutCmd = createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+
+	tex->imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	vkUtils::setImageLayout(
+		layoutCmd,
+		tex->image,
+		VK_IMAGE_ASPECT_COLOR_BIT,
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		tex->imageLayout);
+
+	flushCommandBuffer(layoutCmd, m_queue, true);
+
+	// Create sampler
+	VkSamplerCreateInfo sampler = vkUtils::initializers::samplerCreateInfo();
+	sampler.magFilter = VK_FILTER_LINEAR;
+	sampler.minFilter = VK_FILTER_LINEAR;
+	sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	sampler.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+	sampler.addressModeV = sampler.addressModeU;
+	sampler.addressModeW = sampler.addressModeU;
+	sampler.mipLodBias = 0.0f;
+	sampler.maxAnisotropy = 0;
+	sampler.compareOp = VK_COMPARE_OP_NEVER;
+	sampler.minLod = 0.0f;
+	sampler.maxLod = 0.0f;
+	sampler.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+	VK_CHECK_RESULT(vkCreateSampler(m_device, &sampler, nullptr, &tex->sampler));
+
+	// Create image view
+	VkImageViewCreateInfo view = vkUtils::initializers::imageViewCreateInfo();
+	view.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	view.format = format;
+	view.components = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+	view.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+	view.image = tex->image;
+	VK_CHECK_RESULT(vkCreateImageView(m_device, &view, nullptr, &tex->view));
+
+	// Initialize a descriptor for later use
+	tex->descriptor.imageLayout = tex->imageLayout;
+	tex->descriptor.imageView = tex->view;
+	tex->descriptor.sampler = tex->sampler;
+}
+
+void VulkanHybridRenderer::buildCommandBuffers()
 {
 	VkCommandBufferBeginInfo cmdBufInfo = vkUtils::initializers::commandBufferBeginInfo();
 
 	VkClearValue clearValues[2];
-	clearValues[0].color = { { 0.0f, 0.0f, 0.2f, 0.0f } };
+	clearValues[0].color = { { 0.0f, 0.0f, 0.1f, 0.0f } };
 	clearValues[1].depthStencil = { 1.0f, 0 };
 
 	VkRenderPassBeginInfo renderPassBeginInfo = vkUtils::initializers::renderPassBeginInfo();
@@ -468,6 +530,24 @@ void VulkanDeferredRenderer::buildCommandBuffers()
 
 		VK_CHECK_RESULT(vkBeginCommandBuffer(m_drawCmdBuffers[i], &cmdBufInfo));
 
+		// Image memory barrier to make sure that compute shader writes are finished before sampling from the texture
+		VkImageMemoryBarrier imageMemoryBarrier = {};
+		imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+		imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+		imageMemoryBarrier.image = m_compute.storageRaytraceImage.image;
+		imageMemoryBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+		imageMemoryBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+		imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		vkCmdPipelineBarrier(
+			m_drawCmdBuffers[i],
+			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			VK_FLAGS_NONE,
+			0, nullptr,
+			0, nullptr,
+			1, &imageMemoryBarrier);
+
 		vkCmdBeginRenderPass(m_drawCmdBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 		VkViewport viewport = vkUtils::initializers::viewport((float)m_windowWidth, (float)m_windowHeight, 0.0f, 1.0f);
@@ -477,7 +557,7 @@ void VulkanDeferredRenderer::buildCommandBuffers()
 		vkCmdSetScissor(m_drawCmdBuffers[i], 0, 1, &scissor);
 
 		VkDeviceSize offsets[1] = { 0 };
-		vkCmdBindDescriptorSets(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_deferred, 0, 1, &m_descriptorSets.m_quad, 0, NULL);
+		vkCmdBindDescriptorSets(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_onscreen, 0, 1, &m_descriptorSets.m_quad, 0, NULL);
 
 		if (m_debugDisplay)
 		{
@@ -492,10 +572,11 @@ void VulkanDeferredRenderer::buildCommandBuffers()
 		}
 
 		// Final composition as full screen quad
-		vkCmdBindPipeline(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.m_deferred);
-		vkCmdBindVertexBuffers(m_drawCmdBuffers[i], VERTEX_BUFFER_BIND_ID, 1, &m_sceneMeshes.m_quad.vertices.buf, offsets);
-		vkCmdBindIndexBuffer(m_drawCmdBuffers[i], m_sceneMeshes.m_quad.indices.buf, 0, VK_INDEX_TYPE_UINT32);
-		vkCmdDrawIndexed(m_drawCmdBuffers[i], 6, 1, 0, 0, 1);
+		vkCmdBindDescriptorSets(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_onscreen, 0, 1, &m_descriptorSets.m_onscreen, 0, NULL);
+
+		vkCmdBindPipeline(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.m_onscreen);
+
+		vkCmdDraw(m_drawCmdBuffers[i], 3, 1, 0, 0);
 
 		vkCmdEndRenderPass(m_drawCmdBuffers[i]);
 
@@ -505,7 +586,7 @@ void VulkanDeferredRenderer::buildCommandBuffers()
 	buildDeferredCommandBuffer();
 }
 
-void VulkanDeferredRenderer::loadMeshes()
+void VulkanHybridRenderer::loadMeshes()
 {
 	loadMesh(getAssetPath() + "models/armor/armor.dae", &m_sceneMeshes.m_model, vertexLayout, 1.0f);
 
@@ -516,7 +597,7 @@ void VulkanDeferredRenderer::loadMeshes()
 	loadMesh(getAssetPath() + "models/plane.obj", &m_sceneMeshes.m_floor, vertexLayout, &meshCreateInfo);
 }
 
-void VulkanDeferredRenderer::generateQuads()
+void VulkanHybridRenderer::generateQuads()
 {
 	// Setup vertices for multiple screen aligned quads
 	// Used for displaying final result and debug 
@@ -574,13 +655,15 @@ void VulkanDeferredRenderer::generateQuads()
 		&m_sceneMeshes.m_quad.indices.mem);
 }
 
-void VulkanDeferredRenderer::setupDescriptorFramework()
+void VulkanHybridRenderer::setupDescriptorFramework()
 {
 	// Set-up descriptor pool
 	std::vector<VkDescriptorPoolSize> poolSizes =
 	{
-		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 8),
-		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 9)
+		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4),
+		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 6),
+		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 4),
+		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3),
 	};
 
 	VkDescriptorPoolCreateInfo descriptorPoolInfo =
@@ -592,7 +675,7 @@ void VulkanDeferredRenderer::setupDescriptorFramework()
 	VK_CHECK_RESULT(vkCreateDescriptorPool(m_device, &descriptorPoolInfo, nullptr, &m_descriptorPool));
 
 	// Set-up descriptor set layout
-	// Deferred shading layout
+	// === Deferred shading layout
 	std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings =
 	{
 		// Binding 0 : Vertex shader uniform buffer
@@ -614,12 +697,7 @@ void VulkanDeferredRenderer::setupDescriptorFramework()
 		vkUtils::initializers::descriptorSetLayoutBinding(
 		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 		VK_SHADER_STAGE_FRAGMENT_BIT,
-		3),
-		// Binding 4 : Fragment shader uniform buffer
-		vkUtils::initializers::descriptorSetLayoutBinding(
-		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-		VK_SHADER_STAGE_FRAGMENT_BIT,
-		4),
+		3)
 	};
 
 	VkDescriptorSetLayoutCreateInfo descriptorLayout =
@@ -627,32 +705,99 @@ void VulkanDeferredRenderer::setupDescriptorFramework()
 		setLayoutBindings.data(),
 		static_cast<uint32_t>(setLayoutBindings.size()));
 
-	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_device, &descriptorLayout, nullptr, &m_descriptorSetLayout));
+	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_device, &descriptorLayout, nullptr, &m_descriptorSetLayouts.m_raster));
 
 	VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo =
 		vkUtils::initializers::pipelineLayoutCreateInfo(
-		&m_descriptorSetLayout,
+		&m_descriptorSetLayouts.m_raster,
 		1);
 
-	VK_CHECK_RESULT(vkCreatePipelineLayout(m_device, &pPipelineLayoutCreateInfo, nullptr, &m_pipelineLayouts.m_deferred));
+	VK_CHECK_RESULT(vkCreatePipelineLayout(m_device, &pPipelineLayoutCreateInfo, nullptr, &m_pipelineLayouts.m_onscreen));
 
 	// Offscreen (scene) rendering pipeline layout
 	VK_CHECK_RESULT(vkCreatePipelineLayout(m_device, &pPipelineLayoutCreateInfo, nullptr, &m_pipelineLayouts.m_offscreen));
+
+	// === Compute for raytracing
+	setLayoutBindings =
+	{
+		// Binding 0 :  Position storage image 
+		vkUtils::initializers::descriptorSetLayoutBinding(
+		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+		VK_SHADER_STAGE_COMPUTE_BIT,
+		0),
+		// Binding 1 : Normal storage image
+		vkUtils::initializers::descriptorSetLayoutBinding(
+		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+		VK_SHADER_STAGE_COMPUTE_BIT,
+		1),
+		// Binding 2 : materialIDs storage image
+		vkUtils::initializers::descriptorSetLayoutBinding(
+		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+		VK_SHADER_STAGE_COMPUTE_BIT,
+		2),
+		// Binding 3 : result of raytracing image
+		vkUtils::initializers::descriptorSetLayoutBinding(
+		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+		VK_SHADER_STAGE_COMPUTE_BIT,
+		3),
+		// Binding 4 : triangle indices + materialID of index
+		vkUtils::initializers::descriptorSetLayoutBinding(
+		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		VK_SHADER_STAGE_COMPUTE_BIT,
+		4),
+		// Binding 5 : triangle positions
+		vkUtils::initializers::descriptorSetLayoutBinding(
+		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		VK_SHADER_STAGE_COMPUTE_BIT,
+		5),
+		// Binding 6 : triangle normals
+		vkUtils::initializers::descriptorSetLayoutBinding(
+		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		VK_SHADER_STAGE_COMPUTE_BIT,
+		6),
+		// Binding 7 : ubo
+		vkUtils::initializers::descriptorSetLayoutBinding(
+		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		VK_SHADER_STAGE_COMPUTE_BIT,
+		7),
+		// Binding 8 : materials
+		vkUtils::initializers::descriptorSetLayoutBinding(
+		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		VK_SHADER_STAGE_COMPUTE_BIT,
+		8),
+	};
+
+	descriptorLayout =
+		vkUtils::initializers::descriptorSetLayoutCreateInfo(
+		setLayoutBindings.data(),
+		static_cast<uint32_t>(setLayoutBindings.size()));
+
+	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_device, &descriptorLayout, nullptr, &m_descriptorSetLayouts.m_raytrace));
+
+	pPipelineLayoutCreateInfo =
+		vkUtils::initializers::pipelineLayoutCreateInfo(
+		&m_descriptorSetLayouts.m_raytrace,
+		1);
+
+	VK_CHECK_RESULT(vkCreatePipelineLayout(m_device, &pPipelineLayoutCreateInfo, nullptr, &m_pipelineLayouts.m_raytrace));
+
 }
 
-void VulkanDeferredRenderer::setupDescriptors()
+void VulkanHybridRenderer::setupDescriptors()
 {
+	// Setup target compute texture
+	prepareTextureTarget(&m_compute.storageRaytraceImage, TEX_DIM, TEX_DIM, VK_FORMAT_R8G8B8A8_UNORM);
 	loadTextures();
 	generateQuads();
 	loadMeshes();
 
 	std::vector<VkWriteDescriptorSet> writeDescriptorSets;
 
-	// Textured quad descriptor set
+	// === Textured quad descriptor set
 	VkDescriptorSetAllocateInfo allocInfo =
 		vkUtils::initializers::descriptorSetAllocateInfo(
 		m_descriptorPool,
-		&m_descriptorSetLayout,
+		&m_descriptorSetLayouts.m_raster,
 		1);
 
 	VK_CHECK_RESULT(vkAllocateDescriptorSets(m_device, &allocInfo, &m_descriptorSets.m_quad));
@@ -676,6 +821,7 @@ void VulkanDeferredRenderer::setupDescriptors()
 		m_offScreenFrameBuf.albedo.view,
 		VK_IMAGE_LAYOUT_GENERAL);
 
+	// === Debug / onscreen descriptors
 	writeDescriptorSets = {
 		// Binding 0 : Vertex shader uniform buffer
 		vkUtils::initializers::writeDescriptorSet(
@@ -700,18 +846,12 @@ void VulkanDeferredRenderer::setupDescriptors()
 		m_descriptorSets.m_quad,
 		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 		3,
-		&texDescriptorAlbedo),
-		// Binding 4 : Fragment shader uniform buffer
-		vkUtils::initializers::writeDescriptorSet(
-		m_descriptorSets.m_quad,
-		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-		4,
-		&m_uniformData.m_fsLights.descriptor),
+		&texDescriptorAlbedo)
 	};
 
 	vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
 
-	// Offscreen (scene)
+	// === Offscreen (scene)
 
 	// Model
 	VK_CHECK_RESULT(vkAllocateDescriptorSets(m_device, &allocInfo, &m_descriptorSets.m_model));
@@ -738,7 +878,7 @@ void VulkanDeferredRenderer::setupDescriptors()
 	};
 	vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
 
-	// Backbround
+	// === Backbround
 	VK_CHECK_RESULT(vkAllocateDescriptorSets(m_device, &allocInfo, &m_descriptorSets.m_floor));
 	writeDescriptorSets =
 	{
@@ -763,7 +903,84 @@ void VulkanDeferredRenderer::setupDescriptors()
 	};
 	vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
 
-	// Binding description
+	// === Compute descriptor set for ray tracing
+	allocInfo =
+		vkUtils::initializers::descriptorSetAllocateInfo(
+		m_descriptorPool,
+		&m_descriptorSetLayouts.m_raytrace,
+		1);
+
+	VK_CHECK_RESULT(vkAllocateDescriptorSets(m_device, &allocInfo, &m_descriptorSets.m_raytrace));
+
+	writeDescriptorSets = {
+		// Binding 0 : Positions storage image
+		vkUtils::initializers::writeDescriptorSet(
+		m_descriptorSets.m_raytrace,
+		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+		0,
+		&texDescriptorPosition
+		),
+		// Binding 1 : Normals storage image
+		vkUtils::initializers::writeDescriptorSet(
+		m_descriptorSets.m_raytrace,
+		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+		1,
+		&texDescriptorNormal
+		),
+		// Binding 2 : MaterialIDs storage image
+		vkUtils::initializers::writeDescriptorSet(
+		m_descriptorSets.m_raytrace,
+		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+		2,
+		&texDescriptorAlbedo // @todo: change this to material IDs instead
+		),
+		// Binding 3 : Result of raytracing storage image
+		vkUtils::initializers::writeDescriptorSet(
+		m_descriptorSets.m_raytrace,
+		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+		0,
+		&m_compute.storageRaytraceImage.descriptor
+		),
+		// Binding 4 : Index buffer
+		vkUtils::initializers::writeDescriptorSet(
+		m_descriptorSets.m_raytrace,
+		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		2,
+		&m_compute.buffers.indicesAndMaterialIDs.descriptor
+		),
+		// Binding 5 : Position buffer
+		vkUtils::initializers::writeDescriptorSet(
+		m_descriptorSets.m_raytrace,
+		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		3,
+		&m_compute.buffers.positions.descriptor
+		),
+		// Binding 6 : Normal buffer
+		vkUtils::initializers::writeDescriptorSet(
+		m_descriptorSets.m_raytrace,
+		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		4,
+		&m_compute.buffers.normals.descriptor
+		),
+		// Binding 7 : UBO
+		vkUtils::initializers::writeDescriptorSet(
+		m_descriptorSets.m_raytrace,
+		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		1,
+		&m_compute.buffers.ubo.descriptor
+		),
+		// Binding 8 : Materials buffer
+		vkUtils::initializers::writeDescriptorSet(
+		m_descriptorSets.m_raytrace,
+		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		5,
+		&m_compute.buffers.materials.descriptor
+		)
+	};
+
+	vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
+
+	// === Binding description
 	m_vertices.m_bindingDescriptions.resize(1);
 	m_vertices.m_bindingDescriptions[0] =
 		vkUtils::initializers::vertexInputBindingDescription(
@@ -771,7 +988,7 @@ void VulkanDeferredRenderer::setupDescriptors()
 		vkMeshLoader::vertexSize(vertexLayout),
 		VK_VERTEX_INPUT_RATE_VERTEX);
 
-	// Attribute descriptions
+	// === Attribute descriptions
 	m_vertices.m_attributeDescriptions.resize(5);
 	// Location 0: Position
 	m_vertices.m_attributeDescriptions[0] =
@@ -786,28 +1003,28 @@ void VulkanDeferredRenderer::setupDescriptors()
 		VERTEX_BUFFER_BIND_ID,
 		1,
 		VK_FORMAT_R32G32_SFLOAT,
-		sizeof(float)* 3);
+		sizeof(float) * 3);
 	// Location 2: Color
 	m_vertices.m_attributeDescriptions[2] =
 		vkUtils::initializers::vertexInputAttributeDescription(
 		VERTEX_BUFFER_BIND_ID,
 		2,
 		VK_FORMAT_R32G32B32_SFLOAT,
-		sizeof(float)* 5);
+		sizeof(float) * 5);
 	// Location 3: Normal
 	m_vertices.m_attributeDescriptions[3] =
 		vkUtils::initializers::vertexInputAttributeDescription(
 		VERTEX_BUFFER_BIND_ID,
 		3,
 		VK_FORMAT_R32G32B32_SFLOAT,
-		sizeof(float)* 8);
+		sizeof(float) * 8);
 	// Location 4: Tangent
 	m_vertices.m_attributeDescriptions[4] =
 		vkUtils::initializers::vertexInputAttributeDescription(
 		VERTEX_BUFFER_BIND_ID,
 		4,
 		VK_FORMAT_R32G32B32_SFLOAT,
-		sizeof(float)* 11);
+		sizeof(float) * 11);
 
 	m_vertices.m_inputState = vkUtils::initializers::pipelineVertexInputStateCreateInfo();
 	m_vertices.m_inputState.vertexBindingDescriptionCount = static_cast<uint32_t>(m_vertices.m_bindingDescriptions.size());
@@ -816,7 +1033,7 @@ void VulkanDeferredRenderer::setupDescriptors()
 	m_vertices.m_inputState.pVertexAttributeDescriptions = m_vertices.m_attributeDescriptions.data();
 }
 
-void VulkanDeferredRenderer::setupPipelines()
+void VulkanHybridRenderer::setupPipelines()
 {
 	VulkanRenderer::setupPipelines();
 
@@ -875,7 +1092,7 @@ void VulkanDeferredRenderer::setupPipelines()
 
 	VkGraphicsPipelineCreateInfo pipelineCreateInfo =
 		vkUtils::initializers::pipelineCreateInfo(
-		m_pipelineLayouts.m_deferred,
+		m_pipelineLayouts.m_onscreen,
 		m_renderPass,
 		0);
 
@@ -890,7 +1107,7 @@ void VulkanDeferredRenderer::setupPipelines()
 	pipelineCreateInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
 	pipelineCreateInfo.pStages = shaderStages.data();
 
-	VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_device, m_pipelineCache, 1, &pipelineCreateInfo, nullptr, &m_pipelines.m_deferred));
+	VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_device, m_pipelineCache, 1, &pipelineCreateInfo, nullptr, &m_pipelines.m_onscreen));
 
 	// Debug display pipeline
 	shaderStages[0] = loadShader(getAssetPath() + "shaders/deferred/debug.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
@@ -923,7 +1140,7 @@ void VulkanDeferredRenderer::setupPipelines()
 }
 
 // Prepare and initialize uniform buffer containing shader uniforms
-void VulkanDeferredRenderer::setupUniformBuffers(SRendererContext& context)
+void VulkanHybridRenderer::setupUniformBuffers(SRendererContext& context)
 {
 	// Fullscreen vertex shader
 	createBuffer(
@@ -966,7 +1183,7 @@ void VulkanDeferredRenderer::setupUniformBuffers(SRendererContext& context)
 	updateUniformBufferDeferredLights(context);
 }
 
-void VulkanDeferredRenderer::updateUniformBuffersScreen()
+void VulkanHybridRenderer::updateUniformBuffersScreen()
 {
 	if (m_debugDisplay)
 	{
@@ -984,10 +1201,10 @@ void VulkanDeferredRenderer::updateUniformBuffersScreen()
 	vkUnmapMemory(m_device, m_uniformData.m_vsFullScreen.memory);
 }
 
-void VulkanDeferredRenderer::updateUniformBufferDeferredMatrices(SRendererContext& context)
+void VulkanHybridRenderer::updateUniformBufferDeferredMatrices(SRendererContext& context)
 {
-	glm::vec3 modelRotation = glm::vec3(0,0,0);
-	glm::vec3 modelPosition = glm::vec3(0,0,0);
+	glm::vec3 modelRotation = glm::vec3(0, 0, 0);
+	glm::vec3 modelPosition = glm::vec3(0, 0, 0);
 
 	m_uboOffscreenVS.m_projection = glm::perspective(glm::radians(45.0f), (float)m_windowWidth / (float)m_windowHeight, 0.1f, 256.0f);
 
@@ -1008,7 +1225,7 @@ void VulkanDeferredRenderer::updateUniformBufferDeferredMatrices(SRendererContex
 }
 
 // Update fragment shader light position uniform block
-void VulkanDeferredRenderer::updateUniformBufferDeferredLights(SRendererContext& context)
+void VulkanHybridRenderer::updateUniformBufferDeferredLights(SRendererContext& context)
 {
 	static float timer = 0.0f;
 	timer += 0.005f;
@@ -1062,26 +1279,14 @@ void VulkanDeferredRenderer::updateUniformBufferDeferredLights(SRendererContext&
 	vkUnmapMemory(m_device, m_uniformData.m_fsLights.memory);
 }
 
-void VulkanDeferredRenderer::viewChanged(SRendererContext& context)
+void VulkanHybridRenderer::viewChanged(SRendererContext& context)
 {
 	updateUniformBufferDeferredMatrices(context);
 }
 
-void VulkanDeferredRenderer::toggleDebugDisplay()
+void VulkanHybridRenderer::toggleDebugDisplay()
 {
 	VulkanRenderer::toggleDebugDisplay();
 	reBuildCommandBuffers();
 	updateUniformBuffersScreen();
 }
-
-//void VulkanDeferredRenderer::keyPressed(uint32_t keyCode)
-//{
-//	switch (keyCode)
-//	{
-//	case KEY_F1:
-//	case GAMEPAD_BUTTON_A:
-//		toggleDebugDisplay();
-//		updateTextOverlay();
-//		break;
-//	}
-//}
