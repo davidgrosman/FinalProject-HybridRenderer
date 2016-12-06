@@ -19,6 +19,8 @@ This code is licensed under the MIT license (MIT) (http://opensource.org/license
 #include "VulkanMeshLoader.h"
 #include <tinygltfloader/tiny_gltf_loader.h>
 
+#include "Utilities.h"
+
 typedef unsigned char Byte;
 
 VulkanMeshLoader::VulkanMeshLoader()
@@ -40,27 +42,95 @@ VulkanMeshLoader::~VulkanMeshLoader()
 */
 bool VulkanMeshLoader::LoadMesh(const std::string& filename, int flags)
 {
-	pScene = Importer.ReadFile(filename.c_str(), flags);
-	unsigned int versMjr = aiGetVersionMajor();
-	unsigned int versMnr = aiGetVersionMinor();
-	if (pScene)
+	bool loadedMesh = false;
+	if (!nUtils::hasFileExt(filename.c_str(), "gltf"))
 	{
-		m_Entries.clear();
-		m_Entries.resize(pScene->mNumMeshes);
-		// Read in all meshes in the scene
-		for (auto i = 0; i < m_Entries.size(); i++)
+		pScene = Importer.ReadFile(filename.c_str(), flags);
+		unsigned int versMjr = aiGetVersionMajor();
+		unsigned int versMnr = aiGetVersionMinor();
+		if (pScene)
 		{
-			m_Entries[i].vertexBase = numVertices;
-			numVertices += pScene->mMeshes[i]->mNumVertices;
-			const aiMesh* paiMesh = pScene->mMeshes[i];
-			InitMesh(&m_Entries[i], paiMesh, pScene);
+			m_Entries.clear();
+			m_Entries.resize(pScene->mNumMeshes);
+			// Read in all meshes in the scene
+			for (auto i = 0; i < m_Entries.size(); i++)
+			{
+				m_Entries[i].vertexBase = numVertices;
+				numVertices += pScene->mMeshes[i]->mNumVertices;
+				const aiMesh* paiMesh = pScene->mMeshes[i];
+				InitMesh(&m_Entries[i], paiMesh, pScene);
+			}
+			loadedMesh = true;
 		}
-		return true;
 	}
 	else
 	{
+		loadedMesh = LoadGLTFMesh(filename);
+	}
+	
+	if (!loadedMesh)
+	{
 		printf("Error parsing '%s': '%s'\n", filename.c_str(), Importer.GetErrorString());
 		assert(false);
+	}
+	return loadedMesh;
+}
+
+/**
+* Read mesh data from ASSIMP mesh to an internal mesh representation that can be used to generate Vulkan buffers
+*
+* @param meshEntry Pointer to the target MeshEntry strucutre for the mesh data
+* @param paiMesh ASSIMP mesh to get the data from
+* @param pScene Scene file of the ASSIMP mesh
+*/
+void VulkanMeshLoader::InitMesh(MeshEntry *meshEntry, const aiMesh* paiMesh, const aiScene* pScene)
+{
+	meshEntry->MaterialIndex = paiMesh->mMaterialIndex;
+
+	aiColor3D pColor(0.f, 0.f, 0.f);
+	pScene->mMaterials[paiMesh->mMaterialIndex]->Get(AI_MATKEY_COLOR_DIFFUSE, pColor);
+
+	aiVector3D Zero3D(0.0f, 0.0f, 0.0f);
+
+	for (unsigned int i = 0; i < paiMesh->mNumVertices; i++)
+	{
+		aiVector3D* pPos = &(paiMesh->mVertices[i]);
+		aiVector3D* pNormal = &(paiMesh->mNormals[i]);
+		aiVector3D* pTexCoord = (paiMesh->HasTextureCoords(0)) ? &(paiMesh->mTextureCoords[0][i]) : &Zero3D;
+		aiVector3D* pTangent = (paiMesh->HasTangentsAndBitangents()) ? &(paiMesh->mTangents[i]) : &Zero3D;
+		aiVector3D* pBiTangent = (paiMesh->HasTangentsAndBitangents()) ? &(paiMesh->mBitangents[i]) : &Zero3D;
+
+		Vertex v(
+			glm::vec3(pPos->x, -pPos->y, pPos->z),
+			glm::vec2(pTexCoord->x, pTexCoord->y),
+			glm::vec3(pNormal->x, pNormal->y, pNormal->z),
+			glm::vec3(pTangent->x, pTangent->y, pTangent->z),
+			glm::vec3(pBiTangent->x, pBiTangent->y, pBiTangent->z),
+			glm::vec3(pColor.r, pColor.g, pColor.b)
+			);
+
+		dim.max.x = fmax(pPos->x, dim.max.x);
+		dim.max.y = fmax(pPos->y, dim.max.y);
+		dim.max.z = fmax(pPos->z, dim.max.z);
+
+		dim.min.x = fmin(pPos->x, dim.min.x);
+		dim.min.y = fmin(pPos->y, dim.min.y);
+		dim.min.z = fmin(pPos->z, dim.min.z);
+
+		meshEntry->Vertices.push_back(v);
+	}
+
+	dim.size = dim.max - dim.min;
+
+	uint32_t indexBase = static_cast<uint32_t>(meshEntry->Indices.size());
+	for (unsigned int i = 0; i < paiMesh->mNumFaces; i++)
+	{
+		const aiFace& Face = paiMesh->mFaces[i];
+		if (Face.mNumIndices != 3)
+			continue;
+		meshEntry->Indices.push_back(indexBase + Face.mIndices[0]);
+		meshEntry->Indices.push_back(indexBase + Face.mIndices[1]);
+		meshEntry->Indices.push_back(indexBase + Face.mIndices[2]);
 	}
 }
 
@@ -157,7 +227,7 @@ static std::string GetFilePathExtension(const std::string &FileName) {
 	return "";
 }
 
-void VulkanMeshLoader::LoadGLTFMesh(const std::string& fileName) 
+bool VulkanMeshLoader::LoadGLTFMesh(const std::string& fileName) 
 {
 	tinygltf::Scene scene;
 	tinygltf::TinyGLTFLoader loader;
@@ -182,7 +252,7 @@ void VulkanMeshLoader::LoadGLTFMesh(const std::string& fileName)
 	if (!ret)
 	{
 		printf("Failed to parse glTF\n");
-		return;
+		return false;
 	}
 
 	// ----------- Transformation matrix --------- 
@@ -218,7 +288,7 @@ void VulkanMeshLoader::LoadGLTFMesh(const std::string& fileName)
 				auto primitive = mesh.primitives[i];
 				if (primitive.indices.empty())
 				{
-					return;
+					return true;
 				}
 
 				vkMeshLoader::GLTFMeshData* geom = new vkMeshLoader::GLTFMeshData();
@@ -447,64 +517,7 @@ void VulkanMeshLoader::LoadGLTFMesh(const std::string& fileName)
 			}
 		}
 	}
-}
-
-/**
-* Read mesh data from ASSIMP mesh to an internal mesh representation that can be used to generate Vulkan buffers
-*
-* @param meshEntry Pointer to the target MeshEntry strucutre for the mesh data
-* @param paiMesh ASSIMP mesh to get the data from
-* @param pScene Scene file of the ASSIMP mesh
-*/
-void VulkanMeshLoader::InitMesh(MeshEntry *meshEntry, const aiMesh* paiMesh, const aiScene* pScene)
-{
-	meshEntry->MaterialIndex = paiMesh->mMaterialIndex;
-
-	aiColor3D pColor(0.f, 0.f, 0.f);
-	pScene->mMaterials[paiMesh->mMaterialIndex]->Get(AI_MATKEY_COLOR_DIFFUSE, pColor);
-
-	aiVector3D Zero3D(0.0f, 0.0f, 0.0f);
-
-	for (unsigned int i = 0; i < paiMesh->mNumVertices; i++)
-	{
-		aiVector3D* pPos = &(paiMesh->mVertices[i]);
-		aiVector3D* pNormal = &(paiMesh->mNormals[i]);
-		aiVector3D* pTexCoord = (paiMesh->HasTextureCoords(0)) ? &(paiMesh->mTextureCoords[0][i]) : &Zero3D;
-		aiVector3D* pTangent = (paiMesh->HasTangentsAndBitangents()) ? &(paiMesh->mTangents[i]) : &Zero3D;
-		aiVector3D* pBiTangent = (paiMesh->HasTangentsAndBitangents()) ? &(paiMesh->mBitangents[i]) : &Zero3D;
-
-		Vertex v(
-			glm::vec3(pPos->x, -pPos->y, pPos->z),
-			glm::vec2(pTexCoord->x, pTexCoord->y),
-			glm::vec3(pNormal->x, pNormal->y, pNormal->z),
-			glm::vec3(pTangent->x, pTangent->y, pTangent->z),
-			glm::vec3(pBiTangent->x, pBiTangent->y, pBiTangent->z),
-			glm::vec3(pColor.r, pColor.g, pColor.b)
-			);
-
-		dim.max.x = fmax(pPos->x, dim.max.x);
-		dim.max.y = fmax(pPos->y, dim.max.y);
-		dim.max.z = fmax(pPos->z, dim.max.z);
-
-		dim.min.x = fmin(pPos->x, dim.min.x);
-		dim.min.y = fmin(pPos->y, dim.min.y);
-		dim.min.z = fmin(pPos->z, dim.min.z);
-
-		meshEntry->Vertices.push_back(v);
-	}
-
-	dim.size = dim.max - dim.min;
-
-	uint32_t indexBase = static_cast<uint32_t>(meshEntry->Indices.size());
-	for (unsigned int i = 0; i < paiMesh->mNumFaces; i++)
-	{
-		const aiFace& Face = paiMesh->mFaces[i];
-		if (Face.mNumIndices != 3)
-			continue;
-		meshEntry->Indices.push_back(indexBase + Face.mIndices[0]);
-		meshEntry->Indices.push_back(indexBase + Face.mIndices[1]);
-		meshEntry->Indices.push_back(indexBase + Face.mIndices[2]);
-	}
+	return true;
 }
 
 /**
@@ -528,20 +541,13 @@ void VulkanMeshLoader::createBuffers(
 	VkCommandBuffer copyCmd,
 	VkQueue copyQueue)
 {
-	glm::vec3 scale;
-	glm::vec2 uvscale;
-	glm::vec3 center;
-	if (createInfo == nullptr)
+	vkMeshLoader::MeshCreateInfo meshInfo;
+	if (createInfo != nullptr)
 	{
-		scale = glm::vec3(1.0f);
-		uvscale = glm::vec2(1.0f);
-		center = glm::vec3(0.0f);
-	}
-	else
-	{
-		scale = createInfo->scale;
-		uvscale = createInfo->uvscale;
-		center = createInfo->center;
+		meshInfo.m_pos = createInfo->m_pos;
+		meshInfo.m_rotAxisAndAngle = createInfo->m_rotAxisAndAngle;
+		meshInfo.m_scale = createInfo->m_scale;
+		meshInfo.m_uvscale = createInfo->m_uvscale;
 	}
 
 	std::vector<float> vertexBuffer;
@@ -555,9 +561,23 @@ void VulkanMeshLoader::createBuffers(
 				// Position
 				if (layoutDetail == vkMeshLoader::VERTEX_LAYOUT_POSITION)
 				{
-					vertexBuffer.push_back(m_Entries[m].Vertices[i].m_pos.x * scale.x + center.x);
-					vertexBuffer.push_back(m_Entries[m].Vertices[i].m_pos.y * scale.y + center.y);
-					vertexBuffer.push_back(m_Entries[m].Vertices[i].m_pos.z * scale.z + center.z);
+					glm::mat4 modelWorldMtx;
+					{
+						glm::mat4 scaleMtx = glm::scale(meshInfo.m_scale);
+						glm::mat4 transMtx = glm::translate(meshInfo.m_pos);						
+
+						glm::vec3 rotAxis = glm::vec3(meshInfo.m_rotAxisAndAngle);
+						float rotAngle = meshInfo.m_rotAxisAndAngle.w;
+						glm::mat4 rotMtx = glm::rotate(rotAngle, rotAxis);
+
+						modelWorldMtx = transMtx * rotMtx * scaleMtx;
+					}
+
+
+					glm::vec4 outVtx = modelWorldMtx * glm::vec4(m_Entries[m].Vertices[i].m_pos, 1.0f);
+					vertexBuffer.push_back(outVtx.x);
+					vertexBuffer.push_back(outVtx.y);
+					vertexBuffer.push_back(outVtx.z);
 				}
 				// Normal
 				if (layoutDetail == vkMeshLoader::VERTEX_LAYOUT_NORMAL)
@@ -569,8 +589,8 @@ void VulkanMeshLoader::createBuffers(
 				// Texture coordinates
 				if (layoutDetail == vkMeshLoader::VERTEX_LAYOUT_UV)
 				{
-					vertexBuffer.push_back(m_Entries[m].Vertices[i].m_tex.s * uvscale.s);
-					vertexBuffer.push_back(m_Entries[m].Vertices[i].m_tex.t * uvscale.t);
+					vertexBuffer.push_back(m_Entries[m].Vertices[i].m_tex.s * meshInfo.m_uvscale.s);
+					vertexBuffer.push_back(m_Entries[m].Vertices[i].m_tex.t * meshInfo.m_uvscale.t);
 				}
 				// Color
 				if (layoutDetail == vkMeshLoader::VERTEX_LAYOUT_COLOR)
@@ -610,9 +630,9 @@ void VulkanMeshLoader::createBuffers(
 	}
 	meshBuffer->vertices.size = vertexBuffer.size() * sizeof(float);
 
-	dim.min *= scale;
-	dim.max *= scale;
-	dim.size *= scale;
+	dim.min *= meshInfo.m_scale;
+	dim.max *= meshInfo.m_scale;
+	dim.size *= meshInfo.m_scale;
 
 	std::vector<uint32_t> indexBuffer;
 	for (uint32_t m = 0; m < m_Entries.size(); m++)

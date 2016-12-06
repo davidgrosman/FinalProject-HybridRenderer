@@ -162,11 +162,9 @@ public:
 		VkDescriptorBufferInfo *descriptor);
 	
 
-	// Load a mesh (using ASSIMP) and create vulkan vertex and index buffers with given vertex layout
-	void loadMesh( std::string filename, vkMeshLoader::MeshBuffer *meshBuffer, std::vector<vkMeshLoader::VertexLayout> vertexLayout, float scale);
-
+	// Load a mesh and create vulkan vertex and index buffers with given vertex layout
 	void loadMesh( std::string filename, vkMeshLoader::MeshBuffer *meshBuffer, std::vector<vkMeshLoader::VertexLayout> vertexLayout,
-		vkMeshLoader::MeshCreateInfo *meshCreateInfo, bool isGlTF = false);
+		vkMeshLoader::MeshCreateInfo *meshCreateInfo = NULL);
 
 protected:
 

@@ -840,12 +840,12 @@ void VulkanHybridRenderer::loadMeshes()
 }
 
 void VulkanHybridRenderer::loadColladaMeshes() {
-	loadMesh(getAssetPath() + "models/armor/armor.dae", &m_sceneMeshes.m_model, vertexLayout, 1.0f);
+	loadMesh(getAssetPath() + "models/armor/armor.dae", &m_sceneMeshes.m_model, vertexLayout);
 
 	vkMeshLoader::MeshCreateInfo meshCreateInfo;
-	meshCreateInfo.scale = glm::vec3(2.0f);
-	meshCreateInfo.uvscale = glm::vec2(4.0f);
-	meshCreateInfo.center = glm::vec3(0.0f, 2.35f, 0.0f);
+	meshCreateInfo.m_scale = glm::vec3(2.0f);
+	meshCreateInfo.m_uvscale = glm::vec2(4.0f);
+	meshCreateInfo.m_pos = glm::vec3(0.0f, 2.35f, 0.0f);
 	loadMesh(getAssetPath() + "models/plane.obj", &m_sceneMeshes.m_floor, vertexLayout, &meshCreateInfo);
 
 	// === Binding description

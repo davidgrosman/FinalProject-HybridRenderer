@@ -26,6 +26,19 @@ This code is licensed under the MIT license (MIT) (http://opensource.org/license
 
 #include <GLFW/glfw3.h>
 
+namespace nUtils
+{
+	static bool hasFileExt(const std::string& s, const char* ext) {
+
+		size_t i = s.rfind('.', s.length());
+		if (i != std::string::npos) {
+			return (s.compare(i + 1, std::string::npos, ext) == 0);
+		}
+
+		return false;
+	}
+};
+
 class Camera
 {
 public:
