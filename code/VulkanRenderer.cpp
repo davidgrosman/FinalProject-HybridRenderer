@@ -295,6 +295,16 @@ void VulkanRenderer::loadMesh(std::string filename, vkMeshLoader::MeshBuffer * m
 	delete(mesh);
 }
 
+void VulkanRenderer::loadMeshAsTriangleSoup(std::string filename, std::vector<glm::ivec4>& outIndices, std::vector<glm::vec4>& outPositions, std::vector<glm::vec4>& outNormals)
+{
+	VulkanMeshLoader *mesh = new VulkanMeshLoader();
+	mesh->LoadMesh(filename);
+	
+	outIndices = mesh->m_indices;
+	outPositions = mesh->m_verticePositions;
+	outNormals = mesh->m_verticeNormals;
+}
+
 VulkanRenderer::VulkanRenderer()
 : m_wasInitialized(false)
 , m_debugDisplay(false)

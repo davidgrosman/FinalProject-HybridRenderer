@@ -249,9 +249,9 @@ public:
 	// For gltf mesh
 	std::vector<vkMeshLoader::GLTFMeshData*> meshesData;
 	std::vector<vkMeshLoader::GLTFMaterial> materials;
-	std::vector<glm::ivec4> indices;
-	std::vector<glm::vec4> verticePositions;
-	std::vector<glm::vec4> verticeNormals;
+	std::vector<glm::ivec4> m_indices;
+	std::vector<glm::vec4> m_verticePositions;
+	std::vector<glm::vec4> m_verticeNormals;
 
 	void createBuffers( vk::VulkanDevice* vkDevice,
 		vkMeshLoader::MeshBuffer* meshBuffer,

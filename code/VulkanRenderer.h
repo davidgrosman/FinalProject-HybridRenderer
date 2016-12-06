@@ -166,6 +166,9 @@ public:
 	void loadMesh( std::string filename, vkMeshLoader::MeshBuffer *meshBuffer, std::vector<vkMeshLoader::VertexLayout> vertexLayout,
 		vkMeshLoader::MeshCreateInfo *meshCreateInfo = NULL);
 
+	// Load a mesh as triangle soup
+	void loadMeshAsTriangleSoup(std::string filename, std::vector<glm::ivec4>& indices, std::vector<glm::vec4>& outPositions, std::vector<glm::vec4>& outNormals);
+
 protected:
 
 	// Returns the base asset path (for shaders, models, textures) depending on the os

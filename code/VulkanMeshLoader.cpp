@@ -59,6 +59,18 @@ bool VulkanMeshLoader::LoadMesh(const std::string& filename, int flags)
 				numVertices += pScene->mMeshes[i]->mNumVertices;
 				const aiMesh* paiMesh = pScene->mMeshes[i];
 				InitMesh(&m_Entries[i], paiMesh, pScene);
+
+				// Add to indices
+				for (auto iCount = 0; iCount < m_Entries[i].Indices.size(); iCount += 3) {
+					m_indices.push_back(glm::ivec4(m_Entries[i].Indices[iCount], m_Entries[i].Indices[iCount + 1], m_Entries[i].Indices[iCount + 2], 0));
+				}
+
+				
+
+				for (auto v : m_Entries[i].Vertices) {
+					m_verticePositions.push_back(glm::vec4(v.m_pos, 1));
+					m_verticeNormals.push_back(glm::vec4(v.m_normal, 1));
+				}
 			}
 			loadedMesh = true;
 		}
@@ -325,7 +337,7 @@ bool VulkanMeshLoader::LoadGLTFMesh(const std::string& fileName)
 					uint32_t indexBase = static_cast<uint32_t>(m_Entries[i].Indices.size());
 					for (auto iCount = 0; iCount < indicesCount; iCount += 3)
 					{
-						indices.push_back(glm::ivec4(in[iCount], in[iCount + 1], in[iCount + 2], materialId));
+						m_indices.push_back(glm::ivec4(in[iCount], in[iCount + 1], in[iCount + 2], materialId));
 						m_Entries[e].Indices.push_back(indexBase + in[iCount]);
 						m_Entries[e].Indices.push_back(indexBase + in[iCount + 1]);
 						m_Entries[e].Indices.push_back(indexBase + in[iCount + 2]);
@@ -376,7 +388,7 @@ bool VulkanMeshLoader::LoadGLTFMesh(const std::string& fileName)
 						for (auto p = 0; p < positionCount; ++p)
 						{
 							positions[p] = glm::vec3(matrix * glm::vec4(positions[p], 1.0f));
-							verticePositions.push_back(glm::vec4(positions[p], 1.0f));
+							m_verticePositions.push_back(glm::vec4(positions[p], 1.0f));
 							m_Entries[e].Vertices[p].m_pos = positions[p];
 
 							dim.max.x = fmax(positions[p].x, dim.max.x);
@@ -406,7 +418,7 @@ bool VulkanMeshLoader::LoadGLTFMesh(const std::string& fileName)
 						for (auto p = 0; p < normalCount; ++p)
 						{
 							normals[p] = glm::normalize(matrixNormal * glm::vec4(normals[p], 1.0f));
-							verticeNormals.push_back(glm::vec4(normals[p], 0.0f));
+							m_verticeNormals.push_back(glm::vec4(normals[p], 0.0f));
 							m_Entries[e].Vertices[p].m_normal = normals[p];
 
 						}
@@ -504,10 +516,6 @@ bool VulkanMeshLoader::LoadGLTFMesh(const std::string& fileName)
 							material.transparency = 1.0f;
 						}
 
-						// Hack for light material
-						if (materialId == 9 || materialId == 8) {
-							material.shininess = 1;
-						}
 						materials.push_back(material);
 						++materialId;
 					}

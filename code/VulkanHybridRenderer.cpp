@@ -840,7 +840,13 @@ void VulkanHybridRenderer::loadMeshes()
 }
 
 void VulkanHybridRenderer::loadColladaMeshes() {
+
 	loadMesh(getAssetPath() + "models/armor/armor.dae", &m_sceneMeshes.m_model, vertexLayout);
+	loadMeshAsTriangleSoup(getAssetPath() + "models/armor/armor.dae", m_sceneAttributes.m_indices, m_sceneAttributes.m_verticePositions, m_sceneAttributes.m_verticeNormals);
+
+	SMaterial temp;
+	temp.m_diffuse = glm::vec4(1, 1, 0, 1);
+	m_sceneAttributes.m_materials.push_back(temp);
 
 	vkMeshLoader::MeshCreateInfo meshCreateInfo;
 	meshCreateInfo.m_scale = glm::vec3(2.0f);
@@ -909,7 +915,7 @@ void VulkanHybridRenderer::loadglTFMeshes() {
 	vkGetDeviceQueue(m_device, m_vulkanDevice->queueFamilyIndices.compute, 0, &m_compute.queue);
 
 	// @todo: for now, testing with glTF loader. Later on, we'll need to extract scene attributes from m_sceneMeshes.m_model and m_sceneMeshes.m_floor
-	generateSceneAttributes(getAssetPath() + "models/gltfs/cornell/cornell.glb", m_sceneAttributes);
+	//generateSceneAttributes(getAssetPath() + "models/gltfs/cornell/cornell.glb", m_sceneAttributes);
 
 	std::vector<glm::ivec4> indices = {
 		glm::ivec4(0, 1, 2, 0)
@@ -919,7 +925,7 @@ void VulkanHybridRenderer::loadglTFMeshes() {
 
 	// --  Index buffer
 	VkDeviceSize bufferSize = m_sceneAttributes.m_indices.size() * sizeof(glm::ivec4);
-	bufferSize = 1 * sizeof(glm::ivec4);
+	bufferSize = 100 * sizeof(glm::ivec4);
 
 	createBuffer(
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
