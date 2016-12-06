@@ -39,7 +39,7 @@ void VulkanHybridRenderer::draw(SRendererContext& context)
 	// that command buffers will be executed in the order they
 	// have been submitted by the application
 
-	// Offscreen rendering
+	// =====  Offscreen rendering
 
 	// Wait for swap chain presentation to finish
 	m_submitInfo.pWaitSemaphores = &m_semaphores.m_presentComplete;
@@ -51,17 +51,34 @@ void VulkanHybridRenderer::draw(SRendererContext& context)
 	m_submitInfo.pCommandBuffers = &m_offScreenCmdBuffer;
 	VK_CHECK_RESULT(vkQueueSubmit(m_queue, 1, &m_submitInfo, VK_NULL_HANDLE));
 
-	// Scene rendering
+	// ==== Submit rendering out for final pass
 
 	// Wait for offscreen semaphore
 	m_submitInfo.pWaitSemaphores = &m_offscreenSemaphore;
 	// Signal ready with render complete semaphpre
 	m_submitInfo.pSignalSemaphores = &m_semaphores.m_renderComplete;
 
-	// Submit work
 	m_submitInfo.pCommandBuffers = &m_drawCmdBuffers[m_currentBuffer];
 	VK_CHECK_RESULT(vkQueueSubmit(m_queue, 1, &m_submitInfo, VK_NULL_HANDLE));
 	updateUniformBufferDeferredLights(context);
+
+	// ===== Raytracing
+
+	//// Wait for offscreen semaphore
+	//m_submitInfo.pWaitSemaphores = &m_offscreenSemaphore;
+	//// Signal ready with render complete semaphpre
+	//m_submitInfo.pSignalSemaphores = &m_semaphores.m_renderComplete;
+
+	// Submit compute commands
+	// Use a fence to ensure that compute command buffer has finished executing before using it again
+	vkWaitForFences(m_device, 1, &m_compute.fence, VK_TRUE, UINT64_MAX);
+	vkResetFences(m_device, 1, &m_compute.fence);
+
+	VkSubmitInfo computeSubmitInfo = vkUtils::initializers::submitInfo();
+	computeSubmitInfo.commandBufferCount = 1;
+	computeSubmitInfo.pCommandBuffers = &m_compute.commandBuffer;
+
+	VK_CHECK_RESULT(vkQueueSubmit(m_compute.queue, 1, &computeSubmitInfo, m_compute.fence));
 }
 
 void VulkanHybridRenderer::shutdownVulkan()
@@ -99,12 +116,16 @@ void VulkanHybridRenderer::shutdownVulkan()
 	vkDestroyPipeline(m_device, m_pipelines.m_onscreen, nullptr);
 	vkDestroyPipeline(m_device, m_pipelines.m_offscreen, nullptr);
 	vkDestroyPipeline(m_device, m_pipelines.m_debug, nullptr);
+	vkDestroyPipeline(m_device, m_pipelines.m_raytrace, nullptr);
 
 	vkDestroyPipelineLayout(m_device, m_pipelineLayouts.m_onscreen, nullptr);
 	vkDestroyPipelineLayout(m_device, m_pipelineLayouts.m_offscreen, nullptr);
+	vkDestroyPipelineLayout(m_device, m_pipelineLayouts.m_debug, nullptr);
 	vkDestroyPipelineLayout(m_device, m_pipelineLayouts.m_raytrace, nullptr);
 
-	vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.m_raster, nullptr);
+	vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.m_onscreen, nullptr);
+	vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.m_offscreen, nullptr);
+	vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.m_debug, nullptr);
 	vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.m_raytrace, nullptr);
 
 	// Meshes
@@ -189,6 +210,187 @@ void VulkanHybridRenderer::createAttachment(
 	imageView.subresourceRange.layerCount = 1;
 	imageView.image = attachment->image;
 	VK_CHECK_RESULT(vkCreateImageView(m_device, &imageView, nullptr, &attachment->view));
+}
+
+void VulkanHybridRenderer::setupOnscreenPipeline() {
+
+	VkPipelineInputAssemblyStateCreateInfo inputAssemblyState =
+		vkUtils::initializers::pipelineInputAssemblyStateCreateInfo(
+		VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+		0,
+		VK_FALSE);
+
+	VkPipelineRasterizationStateCreateInfo rasterizationState =
+		vkUtils::initializers::pipelineRasterizationStateCreateInfo(
+		VK_POLYGON_MODE_FILL,
+		VK_CULL_MODE_FRONT_BIT,
+		VK_FRONT_FACE_COUNTER_CLOCKWISE,
+		0);
+
+	VkPipelineColorBlendAttachmentState blendAttachmentState =
+		vkUtils::initializers::pipelineColorBlendAttachmentState(
+		0xf,
+		VK_FALSE);
+
+	VkPipelineColorBlendStateCreateInfo colorBlendState =
+		vkUtils::initializers::pipelineColorBlendStateCreateInfo(
+		1,
+		&blendAttachmentState);
+
+	VkPipelineDepthStencilStateCreateInfo depthStencilState =
+		vkUtils::initializers::pipelineDepthStencilStateCreateInfo(
+		VK_FALSE,
+		VK_FALSE,
+		VK_COMPARE_OP_LESS_OR_EQUAL);
+
+	VkPipelineViewportStateCreateInfo viewportState =
+		vkUtils::initializers::pipelineViewportStateCreateInfo(1, 1, 0);
+
+	VkPipelineMultisampleStateCreateInfo multisampleState =
+		vkUtils::initializers::pipelineMultisampleStateCreateInfo(
+		VK_SAMPLE_COUNT_1_BIT,
+		0);
+
+	std::vector<VkDynamicState> dynamicStateEnables = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR
+	};
+	VkPipelineDynamicStateCreateInfo dynamicState =
+		vkUtils::initializers::pipelineDynamicStateCreateInfo(
+		dynamicStateEnables.data(),
+		static_cast<uint32_t>(dynamicStateEnables.size()),
+		0);
+
+	// Final fullscreen pass pipeline
+	std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
+
+	shaderStages[0] = loadShader(getAssetPath() + "shaders/hybrid/hybrid.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	shaderStages[1] = loadShader(getAssetPath() + "shaders/hybrid/hybrid.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+
+	VkGraphicsPipelineCreateInfo pipelineCreateInfo =
+		vkUtils::initializers::pipelineCreateInfo(
+		m_pipelineLayouts.m_onscreen,
+		m_renderPass,
+		0);
+
+	VkPipelineVertexInputStateCreateInfo emptyInputState{};
+	emptyInputState.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+	emptyInputState.vertexAttributeDescriptionCount = 0;
+	emptyInputState.pVertexAttributeDescriptions = nullptr;
+	emptyInputState.vertexBindingDescriptionCount = 0;
+	emptyInputState.pVertexBindingDescriptions = nullptr;
+	pipelineCreateInfo.pVertexInputState = &emptyInputState;
+
+	pipelineCreateInfo.pInputAssemblyState = &inputAssemblyState;
+	pipelineCreateInfo.pRasterizationState = &rasterizationState;
+	pipelineCreateInfo.pColorBlendState = &colorBlendState;
+	pipelineCreateInfo.pMultisampleState = &multisampleState;
+	pipelineCreateInfo.pViewportState = &viewportState;
+	pipelineCreateInfo.pDepthStencilState = &depthStencilState;
+	pipelineCreateInfo.pDynamicState = &dynamicState;
+	pipelineCreateInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
+	pipelineCreateInfo.pStages = shaderStages.data();
+	pipelineCreateInfo.renderPass = m_renderPass;
+
+	VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_device, m_pipelineCache, 1, &pipelineCreateInfo, nullptr, &m_pipelines.m_onscreen));
+}
+
+void VulkanHybridRenderer::setupDeferredPipeline() {
+	VkPipelineInputAssemblyStateCreateInfo inputAssemblyState =
+		vkUtils::initializers::pipelineInputAssemblyStateCreateInfo(
+		VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+		0,
+		VK_FALSE);
+
+	VkPipelineRasterizationStateCreateInfo rasterizationState =
+		vkUtils::initializers::pipelineRasterizationStateCreateInfo(
+		VK_POLYGON_MODE_FILL,
+		VK_CULL_MODE_BACK_BIT,
+		VK_FRONT_FACE_CLOCKWISE,
+		0);
+
+	VkPipelineColorBlendAttachmentState blendAttachmentState =
+		vkUtils::initializers::pipelineColorBlendAttachmentState(
+		0xf,
+		VK_FALSE);
+
+	VkPipelineColorBlendStateCreateInfo colorBlendState =
+		vkUtils::initializers::pipelineColorBlendStateCreateInfo(
+		1,
+		&blendAttachmentState);
+
+	VkPipelineDepthStencilStateCreateInfo depthStencilState =
+		vkUtils::initializers::pipelineDepthStencilStateCreateInfo(
+		VK_TRUE,
+		VK_TRUE,
+		VK_COMPARE_OP_LESS_OR_EQUAL);
+
+	VkPipelineViewportStateCreateInfo viewportState =
+		vkUtils::initializers::pipelineViewportStateCreateInfo(1, 1, 0);
+
+	VkPipelineMultisampleStateCreateInfo multisampleState =
+		vkUtils::initializers::pipelineMultisampleStateCreateInfo(
+		VK_SAMPLE_COUNT_1_BIT,
+		0);
+
+	std::vector<VkDynamicState> dynamicStateEnables = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR
+	};
+	VkPipelineDynamicStateCreateInfo dynamicState =
+		vkUtils::initializers::pipelineDynamicStateCreateInfo(
+		dynamicStateEnables.data(),
+		static_cast<uint32_t>(dynamicStateEnables.size()),
+		0);
+
+	std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
+
+	// Debug display pipeline
+	shaderStages[0] = loadShader(getAssetPath() + "shaders/hybrid/debug.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	shaderStages[1] = loadShader(getAssetPath() + "shaders/hybrid/debug.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+
+	VkGraphicsPipelineCreateInfo pipelineCreateInfo =
+		vkUtils::initializers::pipelineCreateInfo(
+		m_pipelineLayouts.m_debug,
+		m_renderPass,
+		0);
+
+	pipelineCreateInfo.pVertexInputState = &m_vertices.m_inputState;
+	pipelineCreateInfo.pInputAssemblyState = &inputAssemblyState;
+	pipelineCreateInfo.pRasterizationState = &rasterizationState;
+	pipelineCreateInfo.pColorBlendState = &colorBlendState;
+	pipelineCreateInfo.pMultisampleState = &multisampleState;
+	pipelineCreateInfo.pViewportState = &viewportState;
+	pipelineCreateInfo.pDepthStencilState = &depthStencilState;
+	pipelineCreateInfo.pDynamicState = &dynamicState;
+	pipelineCreateInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
+	pipelineCreateInfo.pStages = shaderStages.data();
+
+	VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_device, m_pipelineCache, 1, &pipelineCreateInfo, nullptr, &m_pipelines.m_debug));
+
+	// Offscreen pipeline
+	shaderStages[0] = loadShader(getAssetPath() + "shaders/hybrid/mrt.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	shaderStages[1] = loadShader(getAssetPath() + "shaders/hybrid/mrt.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+
+	// Separate render pass
+	pipelineCreateInfo.renderPass = m_offScreenFrameBuf.renderPass;
+
+	// Separate layout
+	pipelineCreateInfo.layout = m_pipelineLayouts.m_offscreen;
+
+	// Blend attachment states required for all color attachments
+	// This is important, as color write mask will otherwise be 0x0 and you
+	// won't see anything rendered to the attachment
+	std::array<VkPipelineColorBlendAttachmentState, 3> blendAttachmentStates = {
+		vkUtils::initializers::pipelineColorBlendAttachmentState(0xf, VK_FALSE),
+		vkUtils::initializers::pipelineColorBlendAttachmentState(0xf, VK_FALSE),
+		vkUtils::initializers::pipelineColorBlendAttachmentState(0xf, VK_FALSE)
+	};
+
+	colorBlendState.attachmentCount = static_cast<uint32_t>(blendAttachmentStates.size());
+	colorBlendState.pAttachments = blendAttachmentStates.data();
+
+	VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_device, m_pipelineCache, 1, &pipelineCreateInfo, nullptr, &m_pipelines.m_offscreen));
 }
 
 // Prepare a new framebuffer for offscreen rendering
@@ -350,6 +552,24 @@ void VulkanHybridRenderer::setupFrameBuffer() // prepareOffscreenFramebuffer
 	VK_CHECK_RESULT(vkCreateSampler(m_device, &sampler, nullptr, &m_colorSampler));
 }
 
+void VulkanHybridRenderer::setupRaytracingPipeline() {
+	VkComputePipelineCreateInfo computePipelineCreateInfo =
+		vkUtils::initializers::computePipelineCreateInfo(
+		m_pipelineLayouts.m_raytrace,
+		0);
+
+	VkPipelineShaderStageCreateInfo shader;
+
+	// Create shader modules from bytecodes
+	shader = loadShader(getAssetPath() + "shaders/hybrid/raytrace.comp.spv", VK_SHADER_STAGE_COMPUTE_BIT);
+	computePipelineCreateInfo.stage = shader;
+
+	VK_CHECK_RESULT(vkCreateComputePipelines(m_device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &m_pipelines.m_raytrace));
+
+	VkFenceCreateInfo fenceCreateInfo = vkUtils::initializers::fenceCreateInfo(VK_FENCE_CREATE_SIGNALED_BIT);
+	VK_CHECK_RESULT(vkCreateFence(m_device, &fenceCreateInfo, nullptr, &m_compute.fence));
+}
+
 // Build command buffer for rendering the scene to the offscreen frame buffer attachments
 void VulkanHybridRenderer::buildDeferredCommandBuffer()
 {
@@ -394,7 +614,7 @@ void VulkanHybridRenderer::buildDeferredCommandBuffer()
 	VkDeviceSize offsets[1] = { 0 };
 
 	// Background
-	vkCmdBindDescriptorSets(m_offScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_offscreen, 0, 1, &m_descriptorSets.m_floor, 0, NULL);
+	vkCmdBindDescriptorSets(m_offScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_offscreen, 0, 1, &m_descriptorSets.m_model, 0, NULL);
 	vkCmdBindVertexBuffers(m_offScreenCmdBuffer, VERTEX_BUFFER_BIND_ID, 1, &m_sceneMeshes.m_floor.vertices.buf, offsets);
 	vkCmdBindIndexBuffer(m_offScreenCmdBuffer, m_sceneMeshes.m_floor.indices.buf, 0, VK_INDEX_TYPE_UINT32);
 	vkCmdDrawIndexed(m_offScreenCmdBuffer, m_sceneMeshes.m_floor.indexCount, 1, 0, 0, 0);
@@ -408,6 +628,31 @@ void VulkanHybridRenderer::buildDeferredCommandBuffer()
 	vkCmdEndRenderPass(m_offScreenCmdBuffer);
 
 	VK_CHECK_RESULT(vkEndCommandBuffer(m_offScreenCmdBuffer));
+}
+
+void VulkanHybridRenderer::buildRaytracingCommandBuffer() {
+	
+	vkGetDeviceQueue(m_device, m_vulkanDevice->queueFamilyIndices.compute, 0, &m_compute.queue);
+
+	m_compute.commandBuffer = VulkanRenderer::createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, false);
+
+	// Create a semaphore used to synchronize offscreen rendering and usage
+	VkSemaphoreCreateInfo semaphoreCreateInfo = vkUtils::initializers::semaphoreCreateInfo();
+	VK_CHECK_RESULT(vkCreateSemaphore(m_device, &semaphoreCreateInfo, nullptr, &m_compute.semaphore));
+
+	VkCommandBufferBeginInfo cmdBufInfo = vkUtils::initializers::commandBufferBeginInfo();
+
+	VK_CHECK_RESULT(vkBeginCommandBuffer(m_compute.commandBuffer, &cmdBufInfo));
+
+	// Record binding to the compute pipeline
+	vkCmdBindPipeline(m_compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipelines.m_raytrace);
+
+	// Bind descriptor sets
+	vkCmdBindDescriptorSets(m_compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipelineLayouts.m_raytrace, 0, 1, &m_descriptorSets.m_raytrace, 0, nullptr);
+
+	vkCmdDispatch(m_compute.commandBuffer, m_compute.storageRaytraceImage.width / 16, m_compute.storageRaytraceImage.height / 16, 1);
+
+	VK_CHECK_RESULT(vkEndCommandBuffer(m_compute.commandBuffer));
 }
 
 void VulkanHybridRenderer::loadTextures()
@@ -557,7 +802,7 @@ void VulkanHybridRenderer::buildCommandBuffers()
 		vkCmdSetScissor(m_drawCmdBuffers[i], 0, 1, &scissor);
 
 		VkDeviceSize offsets[1] = { 0 };
-		vkCmdBindDescriptorSets(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_onscreen, 0, 1, &m_descriptorSets.m_quad, 0, NULL);
+		vkCmdBindDescriptorSets(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_debug, 0, 1, &m_descriptorSets.m_debug, 0, NULL);
 
 		if (m_debugDisplay)
 		{
@@ -572,9 +817,10 @@ void VulkanHybridRenderer::buildCommandBuffers()
 		}
 
 		// Final composition as full screen quad
+		vkCmdBindPipeline(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.m_onscreen);
+
 		vkCmdBindDescriptorSets(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_onscreen, 0, 1, &m_descriptorSets.m_onscreen, 0, NULL);
 
-		vkCmdBindPipeline(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.m_onscreen);
 
 		vkCmdDraw(m_drawCmdBuffers[i], 3, 1, 0, 0);
 
@@ -584,10 +830,16 @@ void VulkanHybridRenderer::buildCommandBuffers()
 	}
 
 	buildDeferredCommandBuffer();
+	buildRaytracingCommandBuffer();
 }
 
 void VulkanHybridRenderer::loadMeshes()
 {
+	loadColladaMeshes();
+	loadglTFMeshes();
+}
+
+void VulkanHybridRenderer::loadColladaMeshes() {
 	loadMesh(getAssetPath() + "models/armor/armor.dae", &m_sceneMeshes.m_model, vertexLayout, 1.0f);
 
 	vkMeshLoader::MeshCreateInfo meshCreateInfo;
@@ -595,6 +847,184 @@ void VulkanHybridRenderer::loadMeshes()
 	meshCreateInfo.uvscale = glm::vec2(4.0f);
 	meshCreateInfo.center = glm::vec3(0.0f, 2.35f, 0.0f);
 	loadMesh(getAssetPath() + "models/plane.obj", &m_sceneMeshes.m_floor, vertexLayout, &meshCreateInfo);
+
+	// === Binding description
+	m_vertices.m_bindingDescriptions.resize(1);
+	m_vertices.m_bindingDescriptions[0] =
+		vkUtils::initializers::vertexInputBindingDescription(
+		VERTEX_BUFFER_BIND_ID,
+		vkMeshLoader::vertexSize(vertexLayout),
+		VK_VERTEX_INPUT_RATE_VERTEX);
+
+	// === Attribute descriptions
+	m_vertices.m_attributeDescriptions.resize(5);
+	// Location 0: Position
+	m_vertices.m_attributeDescriptions[0] =
+		vkUtils::initializers::vertexInputAttributeDescription(
+		VERTEX_BUFFER_BIND_ID,
+		0,
+		VK_FORMAT_R32G32B32_SFLOAT,
+		0);
+	// Location 1: Texture coordinates
+	m_vertices.m_attributeDescriptions[1] =
+		vkUtils::initializers::vertexInputAttributeDescription(
+		VERTEX_BUFFER_BIND_ID,
+		1,
+		VK_FORMAT_R32G32_SFLOAT,
+		sizeof(float) * 3);
+	// Location 2: Color
+	m_vertices.m_attributeDescriptions[2] =
+		vkUtils::initializers::vertexInputAttributeDescription(
+		VERTEX_BUFFER_BIND_ID,
+		2,
+		VK_FORMAT_R32G32B32_SFLOAT,
+		sizeof(float) * 5);
+	// Location 3: Normal
+	m_vertices.m_attributeDescriptions[3] =
+		vkUtils::initializers::vertexInputAttributeDescription(
+		VERTEX_BUFFER_BIND_ID,
+		3,
+		VK_FORMAT_R32G32B32_SFLOAT,
+		sizeof(float) * 8);
+	// Location 4: Tangent
+	m_vertices.m_attributeDescriptions[4] =
+		vkUtils::initializers::vertexInputAttributeDescription(
+		VERTEX_BUFFER_BIND_ID,
+		4,
+		VK_FORMAT_R32G32B32_SFLOAT,
+		sizeof(float) * 11);
+
+	m_vertices.m_inputState = vkUtils::initializers::pipelineVertexInputStateCreateInfo();
+	m_vertices.m_inputState.vertexBindingDescriptionCount = static_cast<uint32_t>(m_vertices.m_bindingDescriptions.size());
+	m_vertices.m_inputState.pVertexBindingDescriptions = m_vertices.m_bindingDescriptions.data();
+	m_vertices.m_inputState.vertexAttributeDescriptionCount = static_cast<uint32_t>(m_vertices.m_attributeDescriptions.size());
+	m_vertices.m_inputState.pVertexAttributeDescriptions = m_vertices.m_attributeDescriptions.data();
+
+}
+
+void VulkanHybridRenderer::loadglTFMeshes() {
+	// ==== @todo Parse meshes into triangle soups from glTF
+
+	// Get a queue from the device for copy operation
+	vkGetDeviceQueue(m_device, m_vulkanDevice->queueFamilyIndices.compute, 0, &m_compute.queue);
+
+	// @todo: for now, testing with glTF loader. Later on, we'll need to extract scene attributes from m_sceneMeshes.m_model and m_sceneMeshes.m_floor
+	generateSceneAttributes(getAssetPath() + "models/gltfs/cornell/cornell.glb", m_sceneAttributes);
+
+	std::vector<glm::ivec4> indices = {
+		glm::ivec4(0, 1, 2, 0)
+	};
+
+	vk::Buffer stagingBuffer;
+
+	// --  Index buffer
+	VkDeviceSize bufferSize = m_sceneAttributes.m_indices.size() * sizeof(glm::ivec4);
+	bufferSize = 1 * sizeof(glm::ivec4);
+
+	createBuffer(
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		bufferSize,
+		m_sceneAttributes.m_indices.data(),
+		&stagingBuffer.buffer,
+		&stagingBuffer.memory,
+		&stagingBuffer.descriptor);
+
+	createBuffer(
+		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		bufferSize,
+		nullptr,
+		&m_compute.buffers.indicesAndMaterialIDs.buffer,
+		&m_compute.buffers.indicesAndMaterialIDs.memory,
+		&m_compute.buffers.indicesAndMaterialIDs.descriptor);
+
+	// Copy to staging buffer
+	VkCommandBuffer copyCmd = createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+	VkBufferCopy copyRegion = {};
+	copyRegion.size = bufferSize;
+	vkCmdCopyBuffer(copyCmd, stagingBuffer.buffer, m_compute.buffers.indicesAndMaterialIDs.buffer, 1, &copyRegion);
+	flushCommandBuffer(copyCmd, m_compute.queue, true);
+
+	vkDestroyBuffer(m_device, stagingBuffer.buffer, nullptr);
+	vkFreeMemory(m_device, stagingBuffer.memory, nullptr);
+
+
+	// --  Positions buffer
+	std::vector<glm::vec4> positions = {
+		glm::vec4(-1.0f, 0.0f, 0.0f, 1.0f),
+		glm::vec4(0.0f, 1.0f, 0.0f, 1.0f),
+		glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)
+	};
+	bufferSize = m_sceneAttributes.m_verticePositions.size() * sizeof(glm::vec4);
+	//bufferSize = 3 * sizeof(glm::vec4);
+
+	createBuffer(
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		bufferSize,
+		m_sceneAttributes.m_verticePositions.data(),
+		&stagingBuffer.buffer,
+		&stagingBuffer.memory,
+		&stagingBuffer.descriptor);
+
+	createBuffer(
+		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		bufferSize,
+		nullptr,
+		&m_compute.buffers.positions.buffer,
+		&m_compute.buffers.positions.memory,
+		&m_compute.buffers.positions.descriptor);
+
+	// Copy to staging buffer
+	VkCommandBuffer copyPositionsCmd = createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+	copyRegion = {};
+	copyRegion.size = bufferSize;
+	vkCmdCopyBuffer(copyPositionsCmd, stagingBuffer.buffer, m_compute.buffers.positions.buffer, 1, &copyRegion);
+	flushCommandBuffer(copyPositionsCmd, m_compute.queue, true);
+
+	vkDestroyBuffer(m_device, stagingBuffer.buffer, nullptr);
+	vkFreeMemory(m_device, stagingBuffer.memory, nullptr);
+
+
+	// --  Normals buffer
+	std::vector<glm::vec4> normals = {
+		glm::vec4(0.0f, 0.0f, 1.0f, 1.0f),
+		glm::vec4(0.0f, 0.0f, 1.0f, 1.0f),
+		glm::vec4(0.0f, 0.0f, 1.0f, 1.0f)
+	};
+
+	bufferSize = m_sceneAttributes.m_verticeNormals.size() * sizeof(glm::vec4);
+	//bufferSize = 3 * sizeof(glm::vec4);
+
+	createBuffer(
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		bufferSize,
+		m_sceneAttributes.m_verticeNormals.data(),
+		&stagingBuffer.buffer,
+		&stagingBuffer.memory,
+		&stagingBuffer.descriptor);
+
+	createBuffer(
+		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		bufferSize,
+		nullptr,
+		&m_compute.buffers.normals.buffer,
+		&m_compute.buffers.normals.memory,
+		&m_compute.buffers.normals.descriptor);
+
+	// Copy to staging buffer
+	VkCommandBuffer copyNormalsCmd = createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+	copyRegion = {};
+	copyRegion.size = bufferSize;
+	vkCmdCopyBuffer(copyNormalsCmd, stagingBuffer.buffer, m_compute.buffers.normals.buffer, 1, &copyRegion);
+	flushCommandBuffer(copyNormalsCmd, m_compute.queue, true);
+
+	vkDestroyBuffer(m_device, stagingBuffer.buffer, nullptr);
+	vkFreeMemory(m_device, stagingBuffer.memory, nullptr);
 }
 
 void VulkanHybridRenderer::generateQuads()
@@ -660,9 +1090,9 @@ void VulkanHybridRenderer::setupDescriptorFramework()
 	// Set-up descriptor pool
 	std::vector<VkDescriptorPoolSize> poolSizes =
 	{
-		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4),
-		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 6),
-		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 4),
+		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10),
+		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 15), // Model + floor + out texture
+		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1),
 		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3),
 	};
 
@@ -670,7 +1100,7 @@ void VulkanHybridRenderer::setupDescriptorFramework()
 		vkUtils::initializers::descriptorPoolCreateInfo(
 		static_cast<uint32_t>(poolSizes.size()),
 		poolSizes.data(),
-		3);
+		5);
 
 	VK_CHECK_RESULT(vkCreateDescriptorPool(m_device, &descriptorPoolInfo, nullptr, &m_descriptorPool));
 
@@ -705,34 +1135,95 @@ void VulkanHybridRenderer::setupDescriptorFramework()
 		setLayoutBindings.data(),
 		static_cast<uint32_t>(setLayoutBindings.size()));
 
-	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_device, &descriptorLayout, nullptr, &m_descriptorSetLayouts.m_raster));
+	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_device, &descriptorLayout, nullptr, &m_descriptorSetLayouts.m_offscreen));
 
 	VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo =
 		vkUtils::initializers::pipelineLayoutCreateInfo(
-		&m_descriptorSetLayouts.m_raster,
+		&m_descriptorSetLayouts.m_offscreen,
+		1);
+
+	VK_CHECK_RESULT(vkCreatePipelineLayout(m_device, &pPipelineLayoutCreateInfo, nullptr, &m_pipelineLayouts.m_offscreen));
+
+	// === Debug set layout
+	setLayoutBindings =
+	{
+		// Binding 0 : Vertex shader uniform buffer
+		vkUtils::initializers::descriptorSetLayoutBinding(
+		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		VK_SHADER_STAGE_VERTEX_BIT,
+		0),
+		// Binding 1 : Position texture target / Scene colormap
+		vkUtils::initializers::descriptorSetLayoutBinding(
+		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		VK_SHADER_STAGE_FRAGMENT_BIT,
+		1),
+		// Binding 2 : Normals texture target
+		vkUtils::initializers::descriptorSetLayoutBinding(
+		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		VK_SHADER_STAGE_FRAGMENT_BIT,
+		2),
+		// Binding 3 : Albedo texture target
+		vkUtils::initializers::descriptorSetLayoutBinding(
+		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		VK_SHADER_STAGE_FRAGMENT_BIT,
+		3)
+	};
+
+	descriptorLayout =
+		vkUtils::initializers::descriptorSetLayoutCreateInfo(
+		setLayoutBindings.data(),
+		static_cast<uint32_t>(setLayoutBindings.size()));
+
+	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_device, &descriptorLayout, nullptr, &m_descriptorSetLayouts.m_debug));
+
+	pPipelineLayoutCreateInfo =
+		vkUtils::initializers::pipelineLayoutCreateInfo(
+		&m_descriptorSetLayouts.m_debug,
+		1);
+
+	VK_CHECK_RESULT(vkCreatePipelineLayout(m_device, &pPipelineLayoutCreateInfo, nullptr, &m_pipelineLayouts.m_debug));
+
+
+	// === Onscreen set layout
+	setLayoutBindings =
+	{
+		// Binding 0 : Color sampler
+		vkUtils::initializers::descriptorSetLayoutBinding(
+		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		VK_SHADER_STAGE_FRAGMENT_BIT,
+		0),
+	};
+
+	descriptorLayout =
+		vkUtils::initializers::descriptorSetLayoutCreateInfo(
+		setLayoutBindings.data(),
+		static_cast<uint32_t>(setLayoutBindings.size()));
+
+	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_device, &descriptorLayout, nullptr, &m_descriptorSetLayouts.m_onscreen));
+
+	pPipelineLayoutCreateInfo =
+		vkUtils::initializers::pipelineLayoutCreateInfo(
+		&m_descriptorSetLayouts.m_onscreen,
 		1);
 
 	VK_CHECK_RESULT(vkCreatePipelineLayout(m_device, &pPipelineLayoutCreateInfo, nullptr, &m_pipelineLayouts.m_onscreen));
-
-	// Offscreen (scene) rendering pipeline layout
-	VK_CHECK_RESULT(vkCreatePipelineLayout(m_device, &pPipelineLayoutCreateInfo, nullptr, &m_pipelineLayouts.m_offscreen));
 
 	// === Compute for raytracing
 	setLayoutBindings =
 	{
 		// Binding 0 :  Position storage image 
 		vkUtils::initializers::descriptorSetLayoutBinding(
-		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 		VK_SHADER_STAGE_COMPUTE_BIT,
 		0),
 		// Binding 1 : Normal storage image
 		vkUtils::initializers::descriptorSetLayoutBinding(
-		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 		VK_SHADER_STAGE_COMPUTE_BIT,
 		1),
 		// Binding 2 : materialIDs storage image
 		vkUtils::initializers::descriptorSetLayoutBinding(
-		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 		VK_SHADER_STAGE_COMPUTE_BIT,
 		2),
 		// Binding 3 : result of raytracing image
@@ -785,23 +1276,11 @@ void VulkanHybridRenderer::setupDescriptorFramework()
 
 void VulkanHybridRenderer::setupDescriptors()
 {
-	// Setup target compute texture
-	prepareTextureTarget(&m_compute.storageRaytraceImage, TEX_DIM, TEX_DIM, VK_FORMAT_R8G8B8A8_UNORM);
 	loadTextures();
-	generateQuads();
-	loadMeshes();
 
 	std::vector<VkWriteDescriptorSet> writeDescriptorSets;
 
 	// === Textured quad descriptor set
-	VkDescriptorSetAllocateInfo allocInfo =
-		vkUtils::initializers::descriptorSetAllocateInfo(
-		m_descriptorPool,
-		&m_descriptorSetLayouts.m_raster,
-		1);
-
-	VK_CHECK_RESULT(vkAllocateDescriptorSets(m_device, &allocInfo, &m_descriptorSets.m_quad));
-
 	// Image descriptors for the offscreen color attachments
 	VkDescriptorImageInfo texDescriptorPosition =
 		vkUtils::initializers::descriptorImageInfo(
@@ -821,29 +1300,37 @@ void VulkanHybridRenderer::setupDescriptors()
 		m_offScreenFrameBuf.albedo.view,
 		VK_IMAGE_LAYOUT_GENERAL);
 
-	// === Debug / onscreen descriptors
+	// === Debug descriptors
+	VkDescriptorSetAllocateInfo allocInfo =
+		vkUtils::initializers::descriptorSetAllocateInfo(
+		m_descriptorPool,
+		&m_descriptorSetLayouts.m_debug,
+		1);
+
+	VK_CHECK_RESULT(vkAllocateDescriptorSets(m_device, &allocInfo, &m_descriptorSets.m_debug));
+
 	writeDescriptorSets = {
 		// Binding 0 : Vertex shader uniform buffer
 		vkUtils::initializers::writeDescriptorSet(
-		m_descriptorSets.m_quad,
+		m_descriptorSets.m_debug,
 		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 		0,
 		&m_uniformData.m_vsFullScreen.descriptor),
 		// Binding 1 : Position texture target
 		vkUtils::initializers::writeDescriptorSet(
-		m_descriptorSets.m_quad,
+		m_descriptorSets.m_debug,
 		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 		1,
 		&texDescriptorPosition),
 		// Binding 2 : Normals texture target
 		vkUtils::initializers::writeDescriptorSet(
-		m_descriptorSets.m_quad,
+		m_descriptorSets.m_debug,
 		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 		2,
 		&texDescriptorNormal),
 		// Binding 3 : Albedo texture target
 		vkUtils::initializers::writeDescriptorSet(
-		m_descriptorSets.m_quad,
+		m_descriptorSets.m_debug,
 		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 		3,
 		&texDescriptorAlbedo)
@@ -852,6 +1339,11 @@ void VulkanHybridRenderer::setupDescriptors()
 	vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
 
 	// === Offscreen (scene)
+	allocInfo =
+		vkUtils::initializers::descriptorSetAllocateInfo(
+		m_descriptorPool,
+		&m_descriptorSetLayouts.m_offscreen,
+		1);
 
 	// Model
 	VK_CHECK_RESULT(vkAllocateDescriptorSets(m_device, &allocInfo, &m_descriptorSets.m_model));
@@ -878,7 +1370,7 @@ void VulkanHybridRenderer::setupDescriptors()
 	};
 	vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
 
-	// === Backbround
+	// Floor
 	VK_CHECK_RESULT(vkAllocateDescriptorSets(m_device, &allocInfo, &m_descriptorSets.m_floor));
 	writeDescriptorSets =
 	{
@@ -903,6 +1395,26 @@ void VulkanHybridRenderer::setupDescriptors()
 	};
 	vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
 
+	// === On screen
+	allocInfo =
+		vkUtils::initializers::descriptorSetAllocateInfo(
+		m_descriptorPool,
+		&m_descriptorSetLayouts.m_onscreen,
+		1);
+
+	VK_CHECK_RESULT(vkAllocateDescriptorSets(m_device, &allocInfo, &m_descriptorSets.m_onscreen));
+	
+	writeDescriptorSets =
+	{
+		// Binding 0: Fragment shader color sampler for output
+		vkUtils::initializers::writeDescriptorSet(
+		m_descriptorSets.m_onscreen,
+		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		0,
+		&m_compute.storageRaytraceImage.descriptor),
+	};
+	vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
+
 	// === Compute descriptor set for ray tracing
 	allocInfo =
 		vkUtils::initializers::descriptorSetAllocateInfo(
@@ -916,21 +1428,21 @@ void VulkanHybridRenderer::setupDescriptors()
 		// Binding 0 : Positions storage image
 		vkUtils::initializers::writeDescriptorSet(
 		m_descriptorSets.m_raytrace,
-		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 		0,
 		&texDescriptorPosition
 		),
 		// Binding 1 : Normals storage image
 		vkUtils::initializers::writeDescriptorSet(
 		m_descriptorSets.m_raytrace,
-		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 		1,
 		&texDescriptorNormal
 		),
 		// Binding 2 : MaterialIDs storage image
 		vkUtils::initializers::writeDescriptorSet(
 		m_descriptorSets.m_raytrace,
-		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 		2,
 		&texDescriptorAlbedo // @todo: change this to material IDs instead
 		),
@@ -938,210 +1450,66 @@ void VulkanHybridRenderer::setupDescriptors()
 		vkUtils::initializers::writeDescriptorSet(
 		m_descriptorSets.m_raytrace,
 		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-		0,
+		3,
 		&m_compute.storageRaytraceImage.descriptor
 		),
 		// Binding 4 : Index buffer
 		vkUtils::initializers::writeDescriptorSet(
 		m_descriptorSets.m_raytrace,
 		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-		2,
+		4,
 		&m_compute.buffers.indicesAndMaterialIDs.descriptor
 		),
 		// Binding 5 : Position buffer
 		vkUtils::initializers::writeDescriptorSet(
 		m_descriptorSets.m_raytrace,
 		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-		3,
+		5,
 		&m_compute.buffers.positions.descriptor
 		),
 		// Binding 6 : Normal buffer
 		vkUtils::initializers::writeDescriptorSet(
 		m_descriptorSets.m_raytrace,
 		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-		4,
+		6,
 		&m_compute.buffers.normals.descriptor
 		),
 		// Binding 7 : UBO
 		vkUtils::initializers::writeDescriptorSet(
 		m_descriptorSets.m_raytrace,
 		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-		1,
+		7,
 		&m_compute.buffers.ubo.descriptor
 		),
 		// Binding 8 : Materials buffer
 		vkUtils::initializers::writeDescriptorSet(
 		m_descriptorSets.m_raytrace,
 		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-		5,
+		8,
 		&m_compute.buffers.materials.descriptor
 		)
 	};
 
 	vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
-
-	// === Binding description
-	m_vertices.m_bindingDescriptions.resize(1);
-	m_vertices.m_bindingDescriptions[0] =
-		vkUtils::initializers::vertexInputBindingDescription(
-		VERTEX_BUFFER_BIND_ID,
-		vkMeshLoader::vertexSize(vertexLayout),
-		VK_VERTEX_INPUT_RATE_VERTEX);
-
-	// === Attribute descriptions
-	m_vertices.m_attributeDescriptions.resize(5);
-	// Location 0: Position
-	m_vertices.m_attributeDescriptions[0] =
-		vkUtils::initializers::vertexInputAttributeDescription(
-		VERTEX_BUFFER_BIND_ID,
-		0,
-		VK_FORMAT_R32G32B32_SFLOAT,
-		0);
-	// Location 1: Texture coordinates
-	m_vertices.m_attributeDescriptions[1] =
-		vkUtils::initializers::vertexInputAttributeDescription(
-		VERTEX_BUFFER_BIND_ID,
-		1,
-		VK_FORMAT_R32G32_SFLOAT,
-		sizeof(float) * 3);
-	// Location 2: Color
-	m_vertices.m_attributeDescriptions[2] =
-		vkUtils::initializers::vertexInputAttributeDescription(
-		VERTEX_BUFFER_BIND_ID,
-		2,
-		VK_FORMAT_R32G32B32_SFLOAT,
-		sizeof(float) * 5);
-	// Location 3: Normal
-	m_vertices.m_attributeDescriptions[3] =
-		vkUtils::initializers::vertexInputAttributeDescription(
-		VERTEX_BUFFER_BIND_ID,
-		3,
-		VK_FORMAT_R32G32B32_SFLOAT,
-		sizeof(float) * 8);
-	// Location 4: Tangent
-	m_vertices.m_attributeDescriptions[4] =
-		vkUtils::initializers::vertexInputAttributeDescription(
-		VERTEX_BUFFER_BIND_ID,
-		4,
-		VK_FORMAT_R32G32B32_SFLOAT,
-		sizeof(float) * 11);
-
-	m_vertices.m_inputState = vkUtils::initializers::pipelineVertexInputStateCreateInfo();
-	m_vertices.m_inputState.vertexBindingDescriptionCount = static_cast<uint32_t>(m_vertices.m_bindingDescriptions.size());
-	m_vertices.m_inputState.pVertexBindingDescriptions = m_vertices.m_bindingDescriptions.data();
-	m_vertices.m_inputState.vertexAttributeDescriptionCount = static_cast<uint32_t>(m_vertices.m_attributeDescriptions.size());
-	m_vertices.m_inputState.pVertexAttributeDescriptions = m_vertices.m_attributeDescriptions.data();
 }
 
 void VulkanHybridRenderer::setupPipelines()
 {
 	VulkanRenderer::setupPipelines();
 
-	VkPipelineInputAssemblyStateCreateInfo inputAssemblyState =
-		vkUtils::initializers::pipelineInputAssemblyStateCreateInfo(
-		VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-		0,
-		VK_FALSE);
-
-	VkPipelineRasterizationStateCreateInfo rasterizationState =
-		vkUtils::initializers::pipelineRasterizationStateCreateInfo(
-		VK_POLYGON_MODE_FILL,
-		VK_CULL_MODE_BACK_BIT,
-		VK_FRONT_FACE_CLOCKWISE,
-		0);
-
-	VkPipelineColorBlendAttachmentState blendAttachmentState =
-		vkUtils::initializers::pipelineColorBlendAttachmentState(
-		0xf,
-		VK_FALSE);
-
-	VkPipelineColorBlendStateCreateInfo colorBlendState =
-		vkUtils::initializers::pipelineColorBlendStateCreateInfo(
-		1,
-		&blendAttachmentState);
-
-	VkPipelineDepthStencilStateCreateInfo depthStencilState =
-		vkUtils::initializers::pipelineDepthStencilStateCreateInfo(
-		VK_TRUE,
-		VK_TRUE,
-		VK_COMPARE_OP_LESS_OR_EQUAL);
-
-	VkPipelineViewportStateCreateInfo viewportState =
-		vkUtils::initializers::pipelineViewportStateCreateInfo(1, 1, 0);
-
-	VkPipelineMultisampleStateCreateInfo multisampleState =
-		vkUtils::initializers::pipelineMultisampleStateCreateInfo(
-		VK_SAMPLE_COUNT_1_BIT,
-		0);
-
-	std::vector<VkDynamicState> dynamicStateEnables = {
-		VK_DYNAMIC_STATE_VIEWPORT,
-		VK_DYNAMIC_STATE_SCISSOR
-	};
-	VkPipelineDynamicStateCreateInfo dynamicState =
-		vkUtils::initializers::pipelineDynamicStateCreateInfo(
-		dynamicStateEnables.data(),
-		static_cast<uint32_t>(dynamicStateEnables.size()),
-		0);
-
-	// Final fullscreen pass pipeline
-	std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
-
-	shaderStages[0] = loadShader(getAssetPath() + "shaders/deferred/deferred.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	shaderStages[1] = loadShader(getAssetPath() + "shaders/deferred/deferred.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-
-	VkGraphicsPipelineCreateInfo pipelineCreateInfo =
-		vkUtils::initializers::pipelineCreateInfo(
-		m_pipelineLayouts.m_onscreen,
-		m_renderPass,
-		0);
-
-	pipelineCreateInfo.pVertexInputState = &m_vertices.m_inputState;
-	pipelineCreateInfo.pInputAssemblyState = &inputAssemblyState;
-	pipelineCreateInfo.pRasterizationState = &rasterizationState;
-	pipelineCreateInfo.pColorBlendState = &colorBlendState;
-	pipelineCreateInfo.pMultisampleState = &multisampleState;
-	pipelineCreateInfo.pViewportState = &viewportState;
-	pipelineCreateInfo.pDepthStencilState = &depthStencilState;
-	pipelineCreateInfo.pDynamicState = &dynamicState;
-	pipelineCreateInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
-	pipelineCreateInfo.pStages = shaderStages.data();
-
-	VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_device, m_pipelineCache, 1, &pipelineCreateInfo, nullptr, &m_pipelines.m_onscreen));
-
-	// Debug display pipeline
-	shaderStages[0] = loadShader(getAssetPath() + "shaders/deferred/debug.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	shaderStages[1] = loadShader(getAssetPath() + "shaders/deferred/debug.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-	VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_device, m_pipelineCache, 1, &pipelineCreateInfo, nullptr, &m_pipelines.m_debug));
-
-	// Offscreen pipeline
-	shaderStages[0] = loadShader(getAssetPath() + "shaders/deferred/mrt.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	shaderStages[1] = loadShader(getAssetPath() + "shaders/deferred/mrt.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-
-	// Separate render pass
-	pipelineCreateInfo.renderPass = m_offScreenFrameBuf.renderPass;
-
-	// Separate layout
-	pipelineCreateInfo.layout = m_pipelineLayouts.m_offscreen;
-
-	// Blend attachment states required for all color attachments
-	// This is important, as color write mask will otherwise be 0x0 and you
-	// won't see anything rendered to the attachment
-	std::array<VkPipelineColorBlendAttachmentState, 3> blendAttachmentStates = {
-		vkUtils::initializers::pipelineColorBlendAttachmentState(0xf, VK_FALSE),
-		vkUtils::initializers::pipelineColorBlendAttachmentState(0xf, VK_FALSE),
-		vkUtils::initializers::pipelineColorBlendAttachmentState(0xf, VK_FALSE)
-	};
-
-	colorBlendState.attachmentCount = static_cast<uint32_t>(blendAttachmentStates.size());
-	colorBlendState.pAttachments = blendAttachmentStates.data();
-
-	VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_device, m_pipelineCache, 1, &pipelineCreateInfo, nullptr, &m_pipelines.m_offscreen));
+	setupDeferredPipeline();
+	setupOnscreenPipeline();
+	setupRaytracingPipeline();
 }
 
 // Prepare and initialize uniform buffer containing shader uniforms
 void VulkanHybridRenderer::setupUniformBuffers(SRendererContext& context)
 {
+	// Setup target compute texture
+	prepareTextureTarget(&m_compute.storageRaytraceImage, TEX_DIM, TEX_DIM, VK_FORMAT_R8G8B8A8_UNORM);
+	loadMeshes();
+	generateQuads();
+
 	// Fullscreen vertex shader
 	createBuffer(
 		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -1175,7 +1543,29 @@ void VulkanHybridRenderer::setupUniformBuffers(SRendererContext& context)
 	// Init some values
 	m_uboOffscreenVS.m_instancePos[0] = glm::vec4(0.0f);
 	m_uboOffscreenVS.m_instancePos[1] = glm::vec4(-4.0f, 0.0, -4.0f, 0.0f);
-	m_uboOffscreenVS.m_instancePos[2] = glm::vec4(4.0f, 0.0, -4.0f, 0.0f);
+	m_uboOffscreenVS.m_instancePos[2] = glm::vec4(4.0f, 0.0, -4.0f, 0.0f); 
+
+	// ====== COMPUTE UBO
+	VkDeviceSize bufferSize = sizeof(m_compute.ubo);
+	createBuffer(
+		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		bufferSize,
+		&m_compute.ubo,
+		&m_compute.buffers.ubo.buffer,
+		&m_compute.buffers.ubo.memory,
+		&m_compute.buffers.ubo.descriptor);
+
+	// ====== MATERIALS
+	bufferSize = sizeof(SMaterial) * m_sceneAttributes.m_materials.size();
+	createBuffer(
+		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		bufferSize,
+		m_sceneAttributes.m_materials.data(),
+		&m_compute.buffers.materials.buffer,
+		&m_compute.buffers.materials.memory,
+		&m_compute.buffers.materials.descriptor);
 
 	// Update
 	updateUniformBuffersScreen();

@@ -462,7 +462,7 @@ void VulkanRaytracer::prepareResources() {
 	
 	loadMeshes();
 
-	// Get a graphics queue from the device
+	// Get a queue from the device for copy operation
 	vkGetDeviceQueue(m_device, m_vulkanDevice->queueFamilyIndices.compute, 0, &m_compute.queue);
 
 	// Setup target compute texture

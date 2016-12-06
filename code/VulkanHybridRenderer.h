@@ -39,19 +39,19 @@ public:
 	// Prepare a new framebuffer for offscreen rendering
 	// The contents of this framebuffer are then
 	// blitted to our render target
-	virtual void setupFrameBuffer();
+	void setupFrameBuffer() override;
 
-	virtual void setupUniformBuffers(SRendererContext& context);
+	void setupUniformBuffers(SRendererContext& context) override;
 
 	// set up the resources (eg: desriptorPool, descriptorSetLayout) that are going to be used by the descriptors.
-	virtual void setupDescriptorFramework();
+	void setupDescriptorFramework() override;
 
 	// set up the scene shaders' descriptors.
-	virtual void setupDescriptors();
+	void setupDescriptors() override;
 
-	virtual void setupPipelines();
+	void setupPipelines() override;
 
-	virtual void buildCommandBuffers();
+	void buildCommandBuffers() override;
 
 	void updateUniformBuffersScreen();
 
@@ -63,12 +63,12 @@ public:
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	////////					Event-Handler Functions  								     ////////
 
-	virtual void toggleDebugDisplay();
+	void toggleDebugDisplay() override;
 
 	// Called when view change occurs
 	// Can be overriden in derived class to e.g. update uniform buffers 
 	// Containing view dependant matrices
-	virtual void viewChanged(SRendererContext& context);
+	void viewChanged(SRendererContext& context) override;
 
 private:
 
@@ -96,6 +96,7 @@ private:
 	{
 		VkPipelineLayout m_onscreen;
 		VkPipelineLayout m_offscreen;
+		VkPipelineLayout m_debug;
 		VkPipelineLayout m_raytrace;
 	};
 
@@ -130,17 +131,19 @@ private:
 
 	struct SVkDescriptorSets
 	{
-		VkDescriptorSet m_raytrace;
+		VkDescriptorSet m_onscreen;
 		VkDescriptorSet m_model;
 		VkDescriptorSet m_floor;
-		VkDescriptorSet m_quad;
-		VkDescriptorSet m_onscreen;
+		VkDescriptorSet m_debug;
+		VkDescriptorSet m_raytrace;
 	};
 
 	struct SVkDescriptorSetLayouts
 	{
+		VkDescriptorSetLayout m_onscreen;
+		VkDescriptorSetLayout m_offscreen;
+		VkDescriptorSetLayout m_debug;
 		VkDescriptorSetLayout m_raytrace;
-		VkDescriptorSetLayout m_raster;
 	};
 
 	// Framebuffer for offscreen rendering
@@ -166,13 +169,21 @@ private:
 	// Create a frame buffer attachment
 	void createAttachment(VkFormat format, VkImageUsageFlagBits usage, SFrameBufferAttachment *attachment, VkCommandBuffer layoutCmd);
 
+	// Pipelines setup
+	void setupOnscreenPipeline();
+	void setupDeferredPipeline();
+	void setupRaytracingPipeline();
+
 	// Build command buffer for rendering the scene to the offscreen frame buffer attachments
 	void buildDeferredCommandBuffer();
+	void buildRaytracingCommandBuffer();
 	void reBuildCommandBuffers();
 
 	void prepareTextureTarget(vkUtils::VulkanTexture *tex, uint32_t width, uint32_t height, VkFormat format);
 	void loadTextures();
 	void loadMeshes();
+	void loadColladaMeshes();
+	void loadglTFMeshes();
 	void generateQuads();
 
 private:
@@ -180,6 +191,7 @@ private:
 	SInputTextures			m_floorTex;
 	SInputTextures			m_modelTex;
 
+	SSceneAttributes		m_sceneAttributes;
 	SSceneMeshes			m_sceneMeshes;
 
 	SVkVertices				m_vertices;
