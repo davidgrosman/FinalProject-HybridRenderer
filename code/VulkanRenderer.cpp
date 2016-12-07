@@ -295,7 +295,8 @@ void VulkanRenderer::loadMesh(std::string filename, vkMeshLoader::MeshBuffer * m
 	delete(mesh);
 }
 
-void VulkanRenderer::loadMeshAsTriangleSoup(std::string filename, std::vector<glm::ivec4>& outIndices, std::vector<glm::vec4>& outPositions, std::vector<glm::vec4>& outNormals)
+void VulkanRenderer::loadMeshAsTriangleSoup(std::string filename, std::vector<glm::ivec4>& outIndices, std::vector<glm::vec4>& outPositions, std::vector<glm::vec4>& outNormals, vkMeshLoader::MeshBuffer *meshBuffer, std::vector<vkMeshLoader::VertexLayout> vertexLayout,
+	vkMeshLoader::MeshCreateInfo *meshCreateInfo)
 {
 	VulkanMeshLoader *mesh = new VulkanMeshLoader();
 	mesh->LoadMesh(filename);
@@ -303,6 +304,23 @@ void VulkanRenderer::loadMeshAsTriangleSoup(std::string filename, std::vector<gl
 	outIndices = mesh->m_indices;
 	outPositions = mesh->m_verticePositions;
 	outNormals = mesh->m_verticeNormals;
+
+	VkCommandBuffer copyCmd = VulkanRenderer::createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, false);
+
+	mesh->createBuffers(
+		m_vulkanDevice,
+		meshBuffer,
+		vertexLayout,
+		meshCreateInfo,
+		true,
+		copyCmd,
+		m_queue);
+
+	vkFreeCommandBuffers(m_device, m_cmdPool, 1, &copyCmd);
+
+	meshBuffer->dim = mesh->dim.size;
+
+	delete(mesh);
 }
 
 VulkanRenderer::VulkanRenderer()

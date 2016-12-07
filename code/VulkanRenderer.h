@@ -167,7 +167,8 @@ public:
 		vkMeshLoader::MeshCreateInfo *meshCreateInfo = NULL);
 
 	// Load a mesh as triangle soup
-	void loadMeshAsTriangleSoup(std::string filename, std::vector<glm::ivec4>& indices, std::vector<glm::vec4>& outPositions, std::vector<glm::vec4>& outNormals);
+	void loadMeshAsTriangleSoup(std::string filename, std::vector<glm::ivec4>& indices, std::vector<glm::vec4>& outPositions, std::vector<glm::vec4>& outNormals, vkMeshLoader::MeshBuffer *meshBuffer, std::vector<vkMeshLoader::VertexLayout> vertexLayout,
+		vkMeshLoader::MeshCreateInfo *meshCreateInfo = NULL);
 
 protected:
 

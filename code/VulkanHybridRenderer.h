@@ -60,6 +60,8 @@ public:
 	// Update fragment shader light position uniform block
 	void updateUniformBufferDeferredLights(SRendererContext& context);
 
+	void updateUniformBufferRaytracing(SRendererContext& context);
+
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	////////					Event-Handler Functions  								     ////////
 
@@ -238,16 +240,15 @@ private:
 			vk::Buffer positions;
 			vk::Buffer normals;
 
-		} buffers;
+		} m_buffers;
 
 		// -- Output storage image
-		vkUtils::VulkanTexture storageRaytraceImage;
+		vkUtils::VulkanTexture m_storageRaytraceImage;
 
 		// -- Uniforms
 		struct UBO { // Compute shader uniform block object
-			glm::vec4 lightPosition[100];
-			int lightCount;
-			glm::ivec3 _pad;
+			glm::vec4 m_cameraPosition;
+			SSceneLight m_lights[6];
 		} ubo;
 
 		VkSemaphore semaphore;

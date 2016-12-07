@@ -61,11 +61,11 @@ bool VulkanMeshLoader::LoadMesh(const std::string& filename, int flags)
 				InitMesh(&m_Entries[i], paiMesh, pScene);
 
 				// Add to indices
+				//@todo: Update material ID
+				unsigned int materialID = 0;
 				for (auto iCount = 0; iCount < m_Entries[i].Indices.size(); iCount += 3) {
-					m_indices.push_back(glm::ivec4(m_Entries[i].Indices[iCount], m_Entries[i].Indices[iCount + 1], m_Entries[i].Indices[iCount + 2], 0));
+					m_indices.push_back(glm::ivec4(m_Entries[i].Indices[iCount], m_Entries[i].Indices[iCount + 1], m_Entries[i].Indices[iCount + 2], materialID));
 				}
-
-				
 
 				for (auto v : m_Entries[i].Vertices) {
 					m_verticePositions.push_back(glm::vec4(v.m_pos, 1));

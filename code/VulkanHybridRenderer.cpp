@@ -79,6 +79,7 @@ void VulkanHybridRenderer::draw(SRendererContext& context)
 	computeSubmitInfo.pCommandBuffers = &m_compute.commandBuffer;
 
 	VK_CHECK_RESULT(vkQueueSubmit(m_compute.queue, 1, &computeSubmitInfo, m_compute.fence));
+	updateUniformBufferRaytracing(context);
 }
 
 void VulkanHybridRenderer::shutdownVulkan()
@@ -650,7 +651,7 @@ void VulkanHybridRenderer::buildRaytracingCommandBuffer() {
 	// Bind descriptor sets
 	vkCmdBindDescriptorSets(m_compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipelineLayouts.m_raytrace, 0, 1, &m_descriptorSets.m_raytrace, 0, nullptr);
 
-	vkCmdDispatch(m_compute.commandBuffer, m_compute.storageRaytraceImage.width / 16, m_compute.storageRaytraceImage.height / 16, 1);
+	vkCmdDispatch(m_compute.commandBuffer, m_compute.m_storageRaytraceImage.width / 16, m_compute.m_storageRaytraceImage.height / 16, 1);
 
 	VK_CHECK_RESULT(vkEndCommandBuffer(m_compute.commandBuffer));
 }
@@ -780,7 +781,7 @@ void VulkanHybridRenderer::buildCommandBuffers()
 		imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 		imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
 		imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-		imageMemoryBarrier.image = m_compute.storageRaytraceImage.image;
+		imageMemoryBarrier.image = m_compute.m_storageRaytraceImage.image;
 		imageMemoryBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 		imageMemoryBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
 		imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -841,8 +842,7 @@ void VulkanHybridRenderer::loadMeshes()
 
 void VulkanHybridRenderer::loadColladaMeshes() {
 
-	loadMesh(getAssetPath() + "models/armor/armor.dae", &m_sceneMeshes.m_model, vertexLayout);
-	loadMeshAsTriangleSoup(getAssetPath() + "models/armor/armor.dae", m_sceneAttributes.m_indices, m_sceneAttributes.m_verticePositions, m_sceneAttributes.m_verticeNormals);
+	loadMeshAsTriangleSoup(getAssetPath() + "models/armor/armor.dae", m_sceneAttributes.m_indices, m_sceneAttributes.m_verticePositions, m_sceneAttributes.m_verticeNormals, &m_sceneMeshes.m_model, vertexLayout);
 
 	SMaterial temp;
 	temp.m_diffuse = glm::vec4(1, 1, 0, 1);
@@ -941,15 +941,15 @@ void VulkanHybridRenderer::loadglTFMeshes() {
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		bufferSize,
 		nullptr,
-		&m_compute.buffers.indicesAndMaterialIDs.buffer,
-		&m_compute.buffers.indicesAndMaterialIDs.memory,
-		&m_compute.buffers.indicesAndMaterialIDs.descriptor);
+		&m_compute.m_buffers.indicesAndMaterialIDs.buffer,
+		&m_compute.m_buffers.indicesAndMaterialIDs.memory,
+		&m_compute.m_buffers.indicesAndMaterialIDs.descriptor);
 
 	// Copy to staging buffer
 	VkCommandBuffer copyCmd = createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 	VkBufferCopy copyRegion = {};
 	copyRegion.size = bufferSize;
-	vkCmdCopyBuffer(copyCmd, stagingBuffer.buffer, m_compute.buffers.indicesAndMaterialIDs.buffer, 1, &copyRegion);
+	vkCmdCopyBuffer(copyCmd, stagingBuffer.buffer, m_compute.m_buffers.indicesAndMaterialIDs.buffer, 1, &copyRegion);
 	flushCommandBuffer(copyCmd, m_compute.queue, true);
 
 	vkDestroyBuffer(m_device, stagingBuffer.buffer, nullptr);
@@ -979,15 +979,15 @@ void VulkanHybridRenderer::loadglTFMeshes() {
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		bufferSize,
 		nullptr,
-		&m_compute.buffers.positions.buffer,
-		&m_compute.buffers.positions.memory,
-		&m_compute.buffers.positions.descriptor);
+		&m_compute.m_buffers.positions.buffer,
+		&m_compute.m_buffers.positions.memory,
+		&m_compute.m_buffers.positions.descriptor);
 
 	// Copy to staging buffer
 	VkCommandBuffer copyPositionsCmd = createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 	copyRegion = {};
 	copyRegion.size = bufferSize;
-	vkCmdCopyBuffer(copyPositionsCmd, stagingBuffer.buffer, m_compute.buffers.positions.buffer, 1, &copyRegion);
+	vkCmdCopyBuffer(copyPositionsCmd, stagingBuffer.buffer, m_compute.m_buffers.positions.buffer, 1, &copyRegion);
 	flushCommandBuffer(copyPositionsCmd, m_compute.queue, true);
 
 	vkDestroyBuffer(m_device, stagingBuffer.buffer, nullptr);
@@ -1018,15 +1018,15 @@ void VulkanHybridRenderer::loadglTFMeshes() {
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		bufferSize,
 		nullptr,
-		&m_compute.buffers.normals.buffer,
-		&m_compute.buffers.normals.memory,
-		&m_compute.buffers.normals.descriptor);
+		&m_compute.m_buffers.normals.buffer,
+		&m_compute.m_buffers.normals.memory,
+		&m_compute.m_buffers.normals.descriptor);
 
 	// Copy to staging buffer
 	VkCommandBuffer copyNormalsCmd = createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 	copyRegion = {};
 	copyRegion.size = bufferSize;
-	vkCmdCopyBuffer(copyNormalsCmd, stagingBuffer.buffer, m_compute.buffers.normals.buffer, 1, &copyRegion);
+	vkCmdCopyBuffer(copyNormalsCmd, stagingBuffer.buffer, m_compute.m_buffers.normals.buffer, 1, &copyRegion);
 	flushCommandBuffer(copyNormalsCmd, m_compute.queue, true);
 
 	vkDestroyBuffer(m_device, stagingBuffer.buffer, nullptr);
@@ -1417,7 +1417,7 @@ void VulkanHybridRenderer::setupDescriptors()
 		m_descriptorSets.m_onscreen,
 		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 		0,
-		&m_compute.storageRaytraceImage.descriptor),
+		&m_compute.m_storageRaytraceImage.descriptor),
 	};
 	vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
 
@@ -1457,42 +1457,42 @@ void VulkanHybridRenderer::setupDescriptors()
 		m_descriptorSets.m_raytrace,
 		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
 		3,
-		&m_compute.storageRaytraceImage.descriptor
+		&m_compute.m_storageRaytraceImage.descriptor
 		),
 		// Binding 4 : Index buffer
 		vkUtils::initializers::writeDescriptorSet(
 		m_descriptorSets.m_raytrace,
 		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 		4,
-		&m_compute.buffers.indicesAndMaterialIDs.descriptor
+		&m_compute.m_buffers.indicesAndMaterialIDs.descriptor
 		),
 		// Binding 5 : Position buffer
 		vkUtils::initializers::writeDescriptorSet(
 		m_descriptorSets.m_raytrace,
 		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 		5,
-		&m_compute.buffers.positions.descriptor
+		&m_compute.m_buffers.positions.descriptor
 		),
 		// Binding 6 : Normal buffer
 		vkUtils::initializers::writeDescriptorSet(
 		m_descriptorSets.m_raytrace,
 		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 		6,
-		&m_compute.buffers.normals.descriptor
+		&m_compute.m_buffers.normals.descriptor
 		),
 		// Binding 7 : UBO
 		vkUtils::initializers::writeDescriptorSet(
 		m_descriptorSets.m_raytrace,
 		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 		7,
-		&m_compute.buffers.ubo.descriptor
+		&m_compute.m_buffers.ubo.descriptor
 		),
 		// Binding 8 : Materials buffer
 		vkUtils::initializers::writeDescriptorSet(
 		m_descriptorSets.m_raytrace,
 		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 		8,
-		&m_compute.buffers.materials.descriptor
+		&m_compute.m_buffers.materials.descriptor
 		)
 	};
 
@@ -1512,7 +1512,7 @@ void VulkanHybridRenderer::setupPipelines()
 void VulkanHybridRenderer::setupUniformBuffers(SRendererContext& context)
 {
 	// Setup target compute texture
-	prepareTextureTarget(&m_compute.storageRaytraceImage, TEX_DIM, TEX_DIM, VK_FORMAT_R8G8B8A8_UNORM);
+	prepareTextureTarget(&m_compute.m_storageRaytraceImage, TEX_DIM, TEX_DIM, VK_FORMAT_R8G8B8A8_UNORM);
 	loadMeshes();
 	generateQuads();
 
@@ -1558,9 +1558,9 @@ void VulkanHybridRenderer::setupUniformBuffers(SRendererContext& context)
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 		bufferSize,
 		&m_compute.ubo,
-		&m_compute.buffers.ubo.buffer,
-		&m_compute.buffers.ubo.memory,
-		&m_compute.buffers.ubo.descriptor);
+		&m_compute.m_buffers.ubo.buffer,
+		&m_compute.m_buffers.ubo.memory,
+		&m_compute.m_buffers.ubo.descriptor);
 
 	// ====== MATERIALS
 	bufferSize = sizeof(SMaterial) * m_sceneAttributes.m_materials.size();
@@ -1569,14 +1569,15 @@ void VulkanHybridRenderer::setupUniformBuffers(SRendererContext& context)
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 		bufferSize,
 		m_sceneAttributes.m_materials.data(),
-		&m_compute.buffers.materials.buffer,
-		&m_compute.buffers.materials.memory,
-		&m_compute.buffers.materials.descriptor);
+		&m_compute.m_buffers.materials.buffer,
+		&m_compute.m_buffers.materials.memory,
+		&m_compute.m_buffers.materials.descriptor);
 
 	// Update
 	updateUniformBuffersScreen();
 	updateUniformBufferDeferredMatrices(context);
 	updateUniformBufferDeferredLights(context);
+	updateUniformBufferRaytracing(context);
 }
 
 void VulkanHybridRenderer::updateUniformBuffersScreen()
@@ -1625,6 +1626,7 @@ void VulkanHybridRenderer::updateUniformBufferDeferredLights(SRendererContext& c
 {
 	static float timer = 0.0f;
 	timer += 0.005f;
+	float SPEED = 36.0f;
 
 	// White
 	m_uboFragmentLights.m_lights[0].position = glm::vec4(0.0f, 0.0f, 1.0f, 0.0f);
@@ -1657,14 +1659,14 @@ void VulkanHybridRenderer::updateUniformBufferDeferredLights(SRendererContext& c
 	m_uboFragmentLights.m_lights[1].position.x = -4.0f + sin(glm::radians(36.0f * timer) + 45.0f) * 2.0f;
 	m_uboFragmentLights.m_lights[1].position.z = 0.0f + cos(glm::radians(36.0f * timer) + 45.0f) * 2.0f;
 
-	m_uboFragmentLights.m_lights[2].position.x = 4.0f + sin(glm::radians(36.0f * timer)) * 2.0f;
-	m_uboFragmentLights.m_lights[2].position.z = 0.0f + cos(glm::radians(36.0f * timer)) * 2.0f;
+	m_uboFragmentLights.m_lights[2].position.x = 4.0f + sin(glm::radians(SPEED * timer)) * 2.0f;
+	m_uboFragmentLights.m_lights[2].position.z = 0.0f + cos(glm::radians(SPEED * timer)) * 2.0f;
 
-	m_uboFragmentLights.m_lights[4].position.x = 0.0f + sin(glm::radians(36.0f * timer + 90.0f)) * 5.0f;
-	m_uboFragmentLights.m_lights[4].position.z = 0.0f - cos(glm::radians(36.0f * timer + 45.0f)) * 5.0f;
+	m_uboFragmentLights.m_lights[4].position.x = 0.0f + sin(glm::radians(SPEED * timer + 90.0f)) * 5.0f;
+	m_uboFragmentLights.m_lights[4].position.z = 0.0f - cos(glm::radians(SPEED * timer + 45.0f)) * 5.0f;
 
-	m_uboFragmentLights.m_lights[5].position.x = 0.0f + sin(glm::radians(-36.0f * timer + 135.0f)) * 10.0f;
-	m_uboFragmentLights.m_lights[5].position.z = 0.0f - cos(glm::radians(-36.0f * timer - 45.0f)) * 10.0f;
+	m_uboFragmentLights.m_lights[5].position.x = 0.0f + sin(glm::radians(-SPEED * timer + 135.0f)) * 10.0f;
+	m_uboFragmentLights.m_lights[5].position.z = 0.0f - cos(glm::radians(-SPEED * timer - 45.0f)) * 10.0f;
 
 	// Current view position
 	m_uboFragmentLights.m_viewPos = glm::vec4(context.m_camera.m_position, 0.0f) * glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f);
@@ -1673,6 +1675,19 @@ void VulkanHybridRenderer::updateUniformBufferDeferredLights(SRendererContext& c
 	VK_CHECK_RESULT(vkMapMemory(m_device, m_uniformData.m_fsLights.memory, 0, sizeof(m_uboFragmentLights), 0, (void **)&pData));
 	memcpy(pData, &m_uboFragmentLights, sizeof(m_uboFragmentLights));
 	vkUnmapMemory(m_device, m_uniformData.m_fsLights.memory);
+}
+
+void VulkanHybridRenderer::updateUniformBufferRaytracing(SRendererContext& context) {
+	
+	m_compute.ubo.m_cameraPosition = glm::vec4(context.m_camera.m_position, 1);
+	for (int i = 0; i < 6; ++i) {
+		m_compute.ubo.m_lights[i] = m_uboFragmentLights.m_lights[i];
+	}
+
+	uint8_t *pData;
+	VK_CHECK_RESULT(vkMapMemory(m_device, m_compute.m_buffers.ubo.memory, 0, sizeof(m_compute.ubo), 0, (void **)&pData));
+	memcpy(pData, &m_compute.ubo, sizeof(m_compute.ubo));
+	vkUnmapMemory(m_device, m_compute.m_buffers.ubo.memory);
 }
 
 void VulkanHybridRenderer::viewChanged(SRendererContext& context)
