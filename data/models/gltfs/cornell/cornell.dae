@@ -1,0 +1,390 @@
+<?xml version="1.0" encoding="utf-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
+  <asset><contributor><author></author><authoring_tool>FBX COLLADA exporter</authoring_tool><comments></comments></contributor><created>2016-12-07T19:39:31Z</created><keywords></keywords><modified>2016-12-07T19:39:31Z</modified><revision></revision><subject></subject><title></title><unit meter="0.010000" name="centimeter"></unit><up_axis>Y_UP</up_axis></asset>
+  <library_materials>
+    <material id="lambert1" name="lambert1">
+      <instance_effect url="#lambert1-fx"/>
+    </material>
+    <material id="greenBlinn" name="greenBlinn">
+      <instance_effect url="#greenBlinn-fx"/>
+    </material>
+    <material id="redBlinn" name="redBlinn">
+      <instance_effect url="#redBlinn-fx"/>
+    </material>
+  </library_materials>
+  <library_effects>
+    <effect id="lambert1-fx" name="lambert1">
+      <profile_COMMON>
+        <technique sid="standard">
+          <lambert>
+            <emission>
+              <color sid="emission">0.000000  0.000000 0.000000 1.000000</color>
+            </emission>
+            <ambient>
+              <color sid="ambient">0.000000  0.000000 0.000000 1.000000</color>
+            </ambient>
+            <diffuse>
+              <color sid="diffuse">0.400000  0.400000 0.400000 1.000000</color>
+            </diffuse>
+            <transparent opaque="RGB_ZERO">
+              <color sid="transparent">0.000000  0.000000 0.000000 1.000000</color>
+            </transparent>
+            <transparency>
+              <float sid="transparency">1.000000</float>
+            </transparency>
+          </lambert>
+        </technique>
+      </profile_COMMON>
+    </effect>
+    <effect id="greenBlinn-fx" name="greenBlinn">
+      <profile_COMMON>
+        <technique sid="standard">
+          <phong>
+            <emission>
+              <color sid="emission">0.000000  0.000000 0.000000 1.000000</color>
+            </emission>
+            <ambient>
+              <color sid="ambient">0.000000  0.000000 0.000000 1.000000</color>
+            </ambient>
+            <diffuse>
+              <color sid="diffuse">0.023040  0.403440 0.000000 1.000000</color>
+            </diffuse>
+            <specular>
+              <color sid="specular">0.500000  0.500000 0.500000 1.000000</color>
+            </specular>
+            <shininess>
+              <float sid="shininess">6.311791</float>
+            </shininess>
+            <reflective>
+              <color sid="reflective">0.000000  0.000000 0.000000 1.000000</color>
+            </reflective>
+            <reflectivity>
+              <float sid="reflectivity">0.500000</float>
+            </reflectivity>
+            <transparent opaque="RGB_ZERO">
+              <color sid="transparent">0.000000  0.000000 0.000000 1.000000</color>
+            </transparent>
+            <transparency>
+              <float sid="transparency">1.000000</float>
+            </transparency>
+          </phong>
+        </technique>
+      </profile_COMMON>
+    </effect>
+    <effect id="redBlinn-fx" name="redBlinn">
+      <profile_COMMON>
+        <technique sid="standard">
+          <phong>
+            <emission>
+              <color sid="emission">0.000000  0.000000 0.000000 1.000000</color>
+            </emission>
+            <ambient>
+              <color sid="ambient">0.000000  0.000000 0.000000 1.000000</color>
+            </ambient>
+            <diffuse>
+              <color sid="diffuse">0.530480  0.038880 0.000000 1.000000</color>
+            </diffuse>
+            <specular>
+              <color sid="specular">0.500000  0.500000 0.500000 1.000000</color>
+            </specular>
+            <shininess>
+              <float sid="shininess">6.311791</float>
+            </shininess>
+            <reflective>
+              <color sid="reflective">0.000000  0.000000 0.000000 1.000000</color>
+            </reflective>
+            <reflectivity>
+              <float sid="reflectivity">0.500000</float>
+            </reflectivity>
+            <transparent opaque="RGB_ZERO">
+              <color sid="transparent">0.000000  0.000000 0.000000 1.000000</color>
+            </transparent>
+            <transparency>
+              <float sid="transparency">1.000000</float>
+            </transparency>
+          </phong>
+        </technique>
+      </profile_COMMON>
+    </effect>
+  </library_effects>
+  <library_geometries>
+    <geometry id="pPlane1-lib" name="pPlane1Mesh">
+      <mesh>
+        <source id="pPlane1-POSITION">
+          <float_array id="pPlane1-POSITION-array" count="12">
+-0.500000 -0.000000 0.500000
+0.500000 -0.000000 0.500000
+-0.500000 0.000000 -0.500000
+0.500000 0.000000 -0.500000
+</float_array>
+          <technique_common>
+            <accessor source="#pPlane1-POSITION-array" count="4" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="pPlane1-Normal0">
+          <float_array id="pPlane1-Normal0-array" count="12">
+0.000000 1.000000 0.000000
+0.000000 1.000000 0.000000
+0.000000 1.000000 0.000000
+0.000000 1.000000 0.000000
+</float_array>
+          <technique_common>
+            <accessor source="#pPlane1-Normal0-array" count="4" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="pPlane1-UV0">
+          <float_array id="pPlane1-UV0-array" count="8">
+0.000000 0.000000
+1.000000 0.000000
+0.000000 1.000000
+1.000000 1.000000
+</float_array>
+          <technique_common>
+            <accessor source="#pPlane1-UV0-array" count="4" stride="2">
+              <param name="S" type="float"/>
+              <param name="T" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <vertices id="pPlane1-VERTEX">
+          <input semantic="POSITION" source="#pPlane1-POSITION"/>
+          <input semantic="NORMAL" source="#pPlane1-Normal0"/>
+        </vertices>
+        <triangles count="2" material="lambert1"><input semantic="VERTEX" offset="0" source="#pPlane1-VERTEX"/><input semantic="TEXCOORD" offset="1" set="0" source="#pPlane1-UV0"/><p> 0 0 1 1 2 2 2 2 1 1 3 3</p></triangles>
+      </mesh>
+    </geometry>
+    <geometry id="pPlane2-lib" name="pPlane2Mesh">
+      <mesh>
+        <source id="pPlane2-POSITION">
+          <float_array id="pPlane2-POSITION-array" count="12">
+-0.500000 -0.000000 0.500000
+0.500000 -0.000000 0.500000
+-0.500000 0.000000 -0.500000
+0.500000 0.000000 -0.500000
+</float_array>
+          <technique_common>
+            <accessor source="#pPlane2-POSITION-array" count="4" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="pPlane2-Normal0">
+          <float_array id="pPlane2-Normal0-array" count="12">
+0.000000 1.000000 0.000000
+0.000000 1.000000 0.000000
+0.000000 1.000000 0.000000
+0.000000 1.000000 0.000000
+</float_array>
+          <technique_common>
+            <accessor source="#pPlane2-Normal0-array" count="4" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="pPlane2-UV0">
+          <float_array id="pPlane2-UV0-array" count="8">
+0.000000 0.000000
+1.000000 0.000000
+0.000000 1.000000
+1.000000 1.000000
+</float_array>
+          <technique_common>
+            <accessor source="#pPlane2-UV0-array" count="4" stride="2">
+              <param name="S" type="float"/>
+              <param name="T" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <vertices id="pPlane2-VERTEX">
+          <input semantic="POSITION" source="#pPlane2-POSITION"/>
+          <input semantic="NORMAL" source="#pPlane2-Normal0"/>
+        </vertices>
+        <triangles count="2" material="greenBlinn"><input semantic="VERTEX" offset="0" source="#pPlane2-VERTEX"/><input semantic="TEXCOORD" offset="1" set="0" source="#pPlane2-UV0"/><p> 0 0 1 1 2 2 2 2 1 1 3 3</p></triangles>
+      </mesh>
+    </geometry>
+    <geometry id="pPlane3-lib" name="pPlane3Mesh">
+      <mesh>
+        <source id="pPlane3-POSITION">
+          <float_array id="pPlane3-POSITION-array" count="12">
+-0.500000 -0.000000 0.500000
+0.500000 -0.000000 0.500000
+-0.500000 0.000000 -0.500000
+0.500000 0.000000 -0.500000
+</float_array>
+          <technique_common>
+            <accessor source="#pPlane3-POSITION-array" count="4" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="pPlane3-Normal0">
+          <float_array id="pPlane3-Normal0-array" count="12">
+0.000000 1.000000 0.000000
+0.000000 1.000000 0.000000
+0.000000 1.000000 0.000000
+0.000000 1.000000 0.000000
+</float_array>
+          <technique_common>
+            <accessor source="#pPlane3-Normal0-array" count="4" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="pPlane3-UV0">
+          <float_array id="pPlane3-UV0-array" count="8">
+0.000000 0.000000
+1.000000 0.000000
+0.000000 1.000000
+1.000000 1.000000
+</float_array>
+          <technique_common>
+            <accessor source="#pPlane3-UV0-array" count="4" stride="2">
+              <param name="S" type="float"/>
+              <param name="T" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <vertices id="pPlane3-VERTEX">
+          <input semantic="POSITION" source="#pPlane3-POSITION"/>
+          <input semantic="NORMAL" source="#pPlane3-Normal0"/>
+        </vertices>
+        <triangles count="2" material="lambert1"><input semantic="VERTEX" offset="0" source="#pPlane3-VERTEX"/><input semantic="TEXCOORD" offset="1" set="0" source="#pPlane3-UV0"/><p> 0 0 1 1 2 2 2 2 1 1 3 3</p></triangles>
+      </mesh>
+    </geometry>
+    <geometry id="pPlane5-lib" name="pPlane5Mesh">
+      <mesh>
+        <source id="pPlane5-POSITION">
+          <float_array id="pPlane5-POSITION-array" count="12">
+-0.500000 -0.000000 0.500000
+0.500000 -0.000000 0.500000
+-0.500000 0.000000 -0.500000
+0.500000 0.000000 -0.500000
+</float_array>
+          <technique_common>
+            <accessor source="#pPlane5-POSITION-array" count="4" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="pPlane5-Normal0">
+          <float_array id="pPlane5-Normal0-array" count="12">
+0.000000 1.000000 0.000000
+0.000000 1.000000 0.000000
+0.000000 1.000000 0.000000
+0.000000 1.000000 0.000000
+</float_array>
+          <technique_common>
+            <accessor source="#pPlane5-Normal0-array" count="4" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="pPlane5-UV0">
+          <float_array id="pPlane5-UV0-array" count="8">
+0.000000 0.000000
+1.000000 0.000000
+0.000000 1.000000
+1.000000 1.000000
+</float_array>
+          <technique_common>
+            <accessor source="#pPlane5-UV0-array" count="4" stride="2">
+              <param name="S" type="float"/>
+              <param name="T" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <vertices id="pPlane5-VERTEX">
+          <input semantic="POSITION" source="#pPlane5-POSITION"/>
+          <input semantic="NORMAL" source="#pPlane5-Normal0"/>
+        </vertices>
+        <triangles count="2" material="lambert1"><input semantic="VERTEX" offset="0" source="#pPlane5-VERTEX"/><input semantic="TEXCOORD" offset="1" set="0" source="#pPlane5-UV0"/><p> 0 0 1 1 2 2 2 2 1 1 3 3</p></triangles>
+      </mesh>
+    </geometry>
+    <geometry id="pPlane6-lib" name="pPlane6Mesh">
+      <mesh>
+        <source id="pPlane6-POSITION">
+          <float_array id="pPlane6-POSITION-array" count="12">
+-0.500000 -0.000000 0.500000
+0.500000 -0.000000 0.500000
+-0.500000 0.000000 -0.500000
+0.500000 0.000000 -0.500000
+</float_array>
+          <technique_common>
+            <accessor source="#pPlane6-POSITION-array" count="4" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="pPlane6-Normal0">
+          <float_array id="pPlane6-Normal0-array" count="12">
+0.000000 1.000000 0.000000
+0.000000 1.000000 0.000000
+0.000000 1.000000 0.000000
+0.000000 1.000000 0.000000
+</float_array>
+          <technique_common>
+            <accessor source="#pPlane6-Normal0-array" count="4" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="pPlane6-UV0">
+          <float_array id="pPlane6-UV0-array" count="8">
+0.000000 0.000000
+1.000000 0.000000
+0.000000 1.000000
+1.000000 1.000000
+</float_array>
+          <technique_common>
+            <accessor source="#pPlane6-UV0-array" count="4" stride="2">
+              <param name="S" type="float"/>
+              <param name="T" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <vertices id="pPlane6-VERTEX">
+          <input semantic="POSITION" source="#pPlane6-POSITION"/>
+          <input semantic="NORMAL" source="#pPlane6-Normal0"/>
+        </vertices>
+        <triangles count="2" material="redBlinn"><input semantic="VERTEX" offset="0" source="#pPlane6-VERTEX"/><input semantic="TEXCOORD" offset="1" set="0" source="#pPlane6-UV0"/><p> 0 0 1 1 2 2 2 2 1 1 3 3</p></triangles>
+      </mesh>
+    </geometry>
+  </library_geometries>
+  <library_visual_scenes>
+    <visual_scene id="cornell" name="cornell">
+      <node name="pPlane1" id="pPlane1" sid="pPlane1"><matrix sid="matrix">5.000000 0.000000 0.000000 0.000000 0.000000 1.000000 0.000000 0.000000 0.000000 0.000000 5.000000 0.000000 0.000000 0.000000 0.000000 1.000000</matrix><instance_geometry url="#pPlane1-lib"><bind_material><technique_common><instance_material symbol="lambert1" target="#lambert1"/></technique_common></bind_material></instance_geometry><extra><technique profile="FCOLLADA"><visibility>1.000000</visibility></technique></extra></node>
+      <node name="pPlane2" id="pPlane2" sid="pPlane2"><matrix sid="matrix">0.000000 1.000000 0.000000 -2.500000 -5.000000 0.000000 0.000000 2.500000 0.000000 0.000000 5.000000 0.000000 0.000000 0.000000 0.000000 1.000000</matrix><instance_geometry url="#pPlane2-lib"><bind_material><technique_common><instance_material symbol="greenBlinn" target="#greenBlinn"/></technique_common></bind_material></instance_geometry><extra><technique profile="FCOLLADA"><visibility>1.000000</visibility></technique></extra></node>
+      <node name="pPlane3" id="pPlane3" sid="pPlane3"><matrix sid="matrix">0.000000 0.000000 -5.000000 0.000000 -5.000000 0.000000 -0.000000 2.500000 0.000000 1.000000 0.000000 -2.500000 0.000000 0.000000 0.000000 1.000000</matrix><instance_geometry url="#pPlane3-lib"><bind_material><technique_common><instance_material symbol="lambert1" target="#lambert1"/></technique_common></bind_material></instance_geometry><extra><technique profile="FCOLLADA"><visibility>1.000000</visibility></technique></extra></node>
+      <node name="pPlane5" id="pPlane5" sid="pPlane5"><matrix sid="matrix">5.000000 0.000000 0.000000 0.000000 0.000000 -1.000000 -0.000000 5.000000 0.000000 0.000000 -5.000000 0.000000 0.000000 0.000000 0.000000 1.000000</matrix><instance_geometry url="#pPlane5-lib"><bind_material><technique_common><instance_material symbol="lambert1" target="#lambert1"/></technique_common></bind_material></instance_geometry><extra><technique profile="FCOLLADA"><visibility>1.000000</visibility></technique></extra></node>
+      <node name="pPlane6" id="pPlane6" sid="pPlane6"><matrix sid="matrix">0.000000 -1.000000 -0.000000 2.500000 -5.000000 -0.000000 0.000000 2.500000 -0.000000 0.000000 -5.000000 0.000000 0.000000 0.000000 0.000000 1.000000</matrix><instance_geometry url="#pPlane6-lib"><bind_material><technique_common><instance_material symbol="redBlinn" target="#redBlinn"/></technique_common></bind_material></instance_geometry><extra><technique profile="FCOLLADA"><visibility>1.000000</visibility></technique></extra></node>
+      <extra><technique profile="MAX3D"><frame_rate>24.000000</frame_rate></technique><technique profile="FCOLLADA"><start_time>0.041667</start_time><end_time>8.333333</end_time></technique></extra>
+    </visual_scene>
+  </library_visual_scenes>
+  <scene>
+    <instance_visual_scene url="#cornell"></instance_visual_scene>
+  </scene>
+</COLLADA>
