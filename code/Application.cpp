@@ -137,7 +137,7 @@ CSceneRenderApp::CSceneRenderApp(int width, int height/*, const std::string& sce
 
 	//generateSceneAttributes(sceneFilename, m_sceneAttributes);
 	
-	m_renderer = new VulkanRaytracer();
+	m_renderer = new VulkanDeferredRenderer();
 	m_renderer->initVulkan(m_context, true);
 
 	pScene = this;

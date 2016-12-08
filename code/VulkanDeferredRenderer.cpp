@@ -1029,6 +1029,7 @@ void VulkanDeferredRenderer::updateUniformBufferDeferredLights(SRendererContext&
 {
 	static float timer = 0.0f;
 	timer += 0.005f;
+	float LIGHT_SPEED = 360.0f;
 
 	// White
 	m_uboFragmentLights.m_lights[0].position = glm::vec4(0.0f, 0.0f, 1.0f, 0.0f);
@@ -1055,20 +1056,20 @@ void VulkanDeferredRenderer::updateUniformBufferDeferredLights(SRendererContext&
 	m_uboFragmentLights.m_lights[5].color = glm::vec3(1.0f, 0.7f, 0.3f);
 	m_uboFragmentLights.m_lights[5].radius = 25.0f;
 
-	m_uboFragmentLights.m_lights[0].position.x = sin(glm::radians(360.0f * timer)) * 5.0f;
-	m_uboFragmentLights.m_lights[0].position.z = cos(glm::radians(360.0f * timer)) * 5.0f;
+	m_uboFragmentLights.m_lights[0].position.x = sin(glm::radians(LIGHT_SPEED * timer)) * 5.0f;
+	m_uboFragmentLights.m_lights[0].position.z = cos(glm::radians(LIGHT_SPEED * timer)) * 5.0f;
 
-	m_uboFragmentLights.m_lights[1].position.x = -4.0f + sin(glm::radians(360.0f * timer) + 45.0f) * 2.0f;
-	m_uboFragmentLights.m_lights[1].position.z = 0.0f + cos(glm::radians(360.0f * timer) + 45.0f) * 2.0f;
+	m_uboFragmentLights.m_lights[1].position.x = -4.0f + sin(glm::radians(LIGHT_SPEED * timer) + 45.0f) * 2.0f;
+	m_uboFragmentLights.m_lights[1].position.z = 0.0f + cos(glm::radians(LIGHT_SPEED * timer) + 45.0f) * 2.0f;
 
-	m_uboFragmentLights.m_lights[2].position.x = 4.0f + sin(glm::radians(360.0f * timer)) * 2.0f;
-	m_uboFragmentLights.m_lights[2].position.z = 0.0f + cos(glm::radians(360.0f * timer)) * 2.0f;
+	m_uboFragmentLights.m_lights[2].position.x = 4.0f + sin(glm::radians(LIGHT_SPEED * timer)) * 2.0f;
+	m_uboFragmentLights.m_lights[2].position.z = 0.0f + cos(glm::radians(LIGHT_SPEED * timer)) * 2.0f;
 
-	m_uboFragmentLights.m_lights[4].position.x = 0.0f + sin(glm::radians(360.0f * timer + 90.0f)) * 5.0f;
-	m_uboFragmentLights.m_lights[4].position.z = 0.0f - cos(glm::radians(360.0f * timer + 45.0f)) * 5.0f;
+	m_uboFragmentLights.m_lights[4].position.x = 0.0f + sin(glm::radians(LIGHT_SPEED * timer + 90.0f)) * 5.0f;
+	m_uboFragmentLights.m_lights[4].position.z = 0.0f - cos(glm::radians(LIGHT_SPEED * timer + 45.0f)) * 5.0f;
 
-	m_uboFragmentLights.m_lights[5].position.x = 0.0f + sin(glm::radians(-360.0f * timer + 135.0f)) * 10.0f;
-	m_uboFragmentLights.m_lights[5].position.z = 0.0f - cos(glm::radians(-360.0f * timer - 45.0f)) * 10.0f;
+	m_uboFragmentLights.m_lights[5].position.x = 0.0f + sin(glm::radians(-LIGHT_SPEED * timer + 135.0f)) * 10.0f;
+	m_uboFragmentLights.m_lights[5].position.z = 0.0f - cos(glm::radians(-LIGHT_SPEED * timer - 45.0f)) * 10.0f;
 
 	// Current view position
 	m_uboFragmentLights.m_viewPos = glm::vec4(context.m_camera.m_position, 0.0f) * glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f);
