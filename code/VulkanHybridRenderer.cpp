@@ -938,7 +938,8 @@ void VulkanHybridRenderer::loadMeshes()
 
 	// --  Index buffer
 	VkDeviceSize bufferSize = m_sceneMeshes.m_model.meshAttributes.m_indices.size() * sizeof(glm::ivec4);
-	bufferSize = bufferSize * sizeof(glm::ivec4);
+	//bufferSize = 100 * sizeof(glm::ivec4);
+
 
 	createBuffer(
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -1629,9 +1630,9 @@ void VulkanHybridRenderer::updateUniformBufferDeferredLights(SRendererContext& c
 	float SPEED = 36.0f;
 
 	// White
-	m_uboFragmentLights.m_lights[0].position = glm::vec4(0.0f, -5.0f, 1.0f, 0.0f);
-	m_uboFragmentLights.m_lights[0].color = glm::vec3(1.1f);
-	m_uboFragmentLights.m_lights[0].radius = 5.0f;
+	m_uboFragmentLights.m_lights[0].position = glm::vec4(0.0f, -10.0f, 1.0f, 0.0f);
+	m_uboFragmentLights.m_lights[0].color = glm::vec3(0.8f, 0.8f, 0.7f);
+	m_uboFragmentLights.m_lights[0].radius = 2.0f;
 	// Red
 	m_uboFragmentLights.m_lights[1].position = glm::vec4(-2.0f, -5.0f, 0.0f, 0.0f);
 	m_uboFragmentLights.m_lights[1].color = glm::vec3(1.0f, 0.0f, 0.0f);
