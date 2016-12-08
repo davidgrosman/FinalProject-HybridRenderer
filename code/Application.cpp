@@ -18,8 +18,8 @@ This code is licensed under the MIT license (MIT) (http://opensource.org/license
 #include <iostream>
 #include <time.h>  
 
+//#include <AntTweakBar/AntTweakBar.h>
 #include <GLFW/glfw3.h>
-
 #include "Utilities.h"
 
 #include "Application.h"
@@ -29,6 +29,7 @@ This code is licensed under the MIT license (MIT) (http://opensource.org/license
 #include "VulkanDeferredRenderer.h"
 #include "VulkanRaytracer.h"
 #include "VulkanHybridRenderer.h"
+
 
 //------------------------------
 //-------GLFW CALLBACKS---------
@@ -114,7 +115,7 @@ void CApplication::Run() {
 			start = now;
 		}
 
-		std::string title = "Vulkan Hybrid Renderer | " + std::to_string(m_fps) + " FPS | " + std::to_string(timeElapsedInMs) + " ms";
+		std::string title = m_title + " | " + std::to_string(m_fps) + " FPS | " + std::to_string(timeElapsedInMs) + " ms";
 		glfwSetWindowTitle(m_window, title.c_str());
 
 		float timeElapsedInS = timeElapsedInMs / 1000.0f;
@@ -129,16 +130,15 @@ CSceneRenderApp::CSceneRenderApp(int width, int height/*, const std::string& sce
 {
 	Camera& cam = m_context.m_camera;
 	{
-		cam.m_position = { 2.15f, 0.3f, -8.75f };
-		cam.setRotation(glm::vec3(-0.75f, 12.5f, 0.0f));
-		cam.setPerspective(60.0f, width / (float)height, 0.1f, 256.0f);
+		cam.m_position = {0.f, 2.5f, -5.f };
+		cam.setRotation(glm::vec3(0.f, 0.f, 0.0f));
+		cam.setPerspective(60.0f, width / (float)height, 0.1f, 1000.0f);
 	}
 	m_context.m_window = m_window;
 
-	//generateSceneAttributes(sceneFilename, m_sceneAttributes);
-	
 	m_renderer = new VulkanHybridRenderer();
 	m_renderer->initVulkan(m_context, true);
+	m_title = m_renderer->m_appName;
 
 	pScene = this;
 }

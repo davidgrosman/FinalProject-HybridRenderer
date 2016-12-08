@@ -80,10 +80,16 @@ private:
 		vkUtils::VulkanTexture m_normalMap;
 	};
 
+	struct SSceneMesh {
+		vkMeshLoader::MeshBuffer meshBuffer;
+		SSceneAttributes meshAttributes;
+	};
+
 	struct SSceneMeshes
 	{
-		vkMeshLoader::MeshBuffer m_model;
-		vkMeshLoader::MeshBuffer m_floor;
+		SSceneMesh m_model;
+		SSceneMesh m_floor;
+		SSceneMesh m_transparentObj;
 		vkMeshLoader::MeshBuffer m_quad;
 	};
 
@@ -115,7 +121,7 @@ private:
 		glm::mat4 m_projection;
 		glm::mat4 m_model;
 		glm::mat4 m_view;
-		glm::vec4 m_instancePos[3];
+		glm::vec4 m_instancePos[1];
 	};
 
 	struct SFragShaderUniforms
@@ -184,8 +190,6 @@ private:
 	void prepareTextureTarget(vkUtils::VulkanTexture *tex, uint32_t width, uint32_t height, VkFormat format);
 	void loadTextures();
 	void loadMeshes();
-	void loadColladaMeshes();
-	void loadglTFMeshes();
 	void generateQuads();
 
 private:
@@ -193,7 +197,6 @@ private:
 	SInputTextures			m_floorTex;
 	SInputTextures			m_modelTex;
 
-	SSceneAttributes		m_sceneAttributes;
 	SSceneMeshes			m_sceneMeshes;
 
 	SVkVertices				m_vertices;
@@ -249,6 +252,8 @@ private:
 		struct UBO { // Compute shader uniform block object
 			glm::vec4 m_cameraPosition;
 			SSceneLight m_lights[6];
+			uint32_t	m_lightCount;
+			glm::ivec3  _pad;
 		} ubo;
 
 		VkSemaphore semaphore;

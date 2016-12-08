@@ -20,35 +20,6 @@ This code is licensed under the MIT license (MIT) (http://opensource.org/license
 
 #include <glm/glm.hpp>
 #include <vector>
-#include <map>
-
-typedef unsigned char Byte;
-
-
-enum EVertexAttributeType
-{
-	INDEX,
-	POSITION,
-	NORMAL,
-	TEXCOORD
-};
-
-struct SVertexAttributes
-{
-	size_t m_byteStride;
-	size_t m_count;
-	int m_componentLength;
-	int m_componentTypeByteSize;
-};
-
-struct SGeometryAttributes
-{
-	SGeometryAttributes() : m_vertexData(), m_vertexAttributes()
-	{}
-
-	std::map<EVertexAttributeType, std::vector<Byte>> m_vertexData;
-	std::map<EVertexAttributeType, SVertexAttributes> m_vertexAttributes;
-};
 
 struct SMaterial
 {
@@ -63,13 +34,10 @@ struct SMaterial
 
 struct SSceneAttributes
 {
-	std::vector<SGeometryAttributes> m_geometriesData;
-	std::vector<SMaterial> m_materials;
 	std::vector<glm::ivec4> m_indices; // The fourth element of indices is used as material IDs
 	std::vector<glm::vec4> m_verticePositions;
 	std::vector<glm::vec4> m_verticeNormals;
+	std::vector<SMaterial> m_materials;
 };
-
-extern void generateSceneAttributes(const std::string& fileName, SSceneAttributes& outScene);
 
 #endif // _GFX_SCENE_H_

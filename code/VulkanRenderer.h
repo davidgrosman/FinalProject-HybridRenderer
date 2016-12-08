@@ -163,12 +163,10 @@ public:
 	
 
 	// Load a mesh and create vulkan vertex and index buffers with given vertex layout
-	void loadMesh( std::string filename, vkMeshLoader::MeshBuffer *meshBuffer, std::vector<vkMeshLoader::VertexLayout> vertexLayout,
+	void loadMesh( std::string filename, vkMeshLoader::MeshBuffer *meshBuffer, SSceneAttributes* meshAttributes, std::vector<vkMeshLoader::VertexLayout> vertexLayout,
 		vkMeshLoader::MeshCreateInfo *meshCreateInfo = NULL);
 
-	// Load a mesh as triangle soup
-	void loadMeshAsTriangleSoup(std::string filename, std::vector<glm::ivec4>& indices, std::vector<glm::vec4>& outPositions, std::vector<glm::vec4>& outNormals, vkMeshLoader::MeshBuffer *meshBuffer, std::vector<vkMeshLoader::VertexLayout> vertexLayout,
-		vkMeshLoader::MeshCreateInfo *meshCreateInfo = NULL);
+	std::string m_appName = "Vulkan Renderer";
 
 protected:
 
@@ -213,8 +211,6 @@ protected:
 	// Frame counter to display fps
 	uint32_t m_frameCounter = 0;
 	uint32_t m_lastFPS = 0;
-
-	std::string m_appName = "Vulkan Renderer";
 
 protected:
 

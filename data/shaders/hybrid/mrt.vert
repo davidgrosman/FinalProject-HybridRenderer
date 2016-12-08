@@ -14,7 +14,7 @@ layout (binding = 0) uniform UBO
 	mat4 projection;
 	mat4 model;
 	mat4 view;
-	vec4 instancePos[3];
+	vec4 instancePos[1];
 } ubo;
 
 layout (location = 0) out vec3 outNormal;
@@ -41,7 +41,7 @@ void main()
 	outWorldPos = vec3(ubo.model * tmpPos);
 	// GL to Vulkan coord space
 	outWorldPos.y = -outWorldPos.y;
-	
+
 	// Normal in world space
 	mat3 mNormal = transpose(inverse(mat3(ubo.model)));
 	outNormal = mNormal * normalize(inNormal);	

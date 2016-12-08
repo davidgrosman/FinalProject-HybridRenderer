@@ -17,6 +17,8 @@ This code is licensed under the MIT license (MIT) (http://opensource.org/license
 
 
 #include "VulkanMeshLoader.h"
+#define TINYGLTF_LOADER_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
 #include <tinygltfloader/tiny_gltf_loader.h>
 
 #include "Utilities.h"
@@ -64,12 +66,12 @@ bool VulkanMeshLoader::LoadMesh(const std::string& filename, int flags)
 				//@todo: Update material ID
 				unsigned int materialID = 0;
 				for (auto iCount = 0; iCount < m_Entries[i].Indices.size(); iCount += 3) {
-					m_indices.push_back(glm::ivec4(m_Entries[i].Indices[iCount], m_Entries[i].Indices[iCount + 1], m_Entries[i].Indices[iCount + 2], materialID));
+					m_sceneAttributes.m_indices.push_back(glm::ivec4(m_Entries[i].Indices[iCount], m_Entries[i].Indices[iCount + 1], m_Entries[i].Indices[iCount + 2], materialID));
 				}
 
 				for (auto v : m_Entries[i].Vertices) {
-					m_verticePositions.push_back(glm::vec4(v.m_pos, 1));
-					m_verticeNormals.push_back(glm::vec4(v.m_normal, 1));
+					m_sceneAttributes.m_verticePositions.push_back(glm::vec4(v.m_pos, 1));
+					m_sceneAttributes.m_verticeNormals.push_back(glm::vec4(v.m_normal, 1));
 				}
 			}
 			loadedMesh = true;
@@ -303,8 +305,6 @@ bool VulkanMeshLoader::LoadGLTFMesh(const std::string& fileName)
 					return true;
 				}
 
-				vkMeshLoader::GLTFMeshData* geom = new vkMeshLoader::GLTFMeshData();
-
 				// -------- Indices ----------
 				{
 					// Get accessor info
@@ -322,22 +322,13 @@ bool VulkanMeshLoader::LoadGLTFMesh(const std::string& fileName)
 					auto last = indexBuffer.data.begin() + bufferOffset + bufferLength;
 					std::vector<Byte> data = std::vector<Byte>(first, last);
 
-					vkMeshLoader::VertexAttributeInfo attributeInfo = {
-						indexAccessor.byteStride,
-						indexAccessor.count,
-						componentLength,
-						componentTypeByteSize
-					};
-					geom->vertexAttributes.insert(std::make_pair(vkMeshLoader::EVertexAttributeType::INDEX, attributeInfo));
-					geom->vertexData.insert(std::make_pair(vkMeshLoader::EVertexAttributeType::INDEX, data));
-
 					int indicesCount = indexAccessor.count;
 					uint16_t* in = reinterpret_cast<uint16_t*>(data.data());
 					
 					uint32_t indexBase = static_cast<uint32_t>(m_Entries[e].Indices.size());
 					for (auto iCount = 0; iCount < indicesCount; iCount += 3)
 					{
-						m_indices.push_back(glm::ivec4(in[iCount], in[iCount + 1], in[iCount + 2], materialId));
+						m_sceneAttributes.m_indices.push_back(glm::ivec4(in[iCount], in[iCount + 1], in[iCount + 2], materialId));
 						m_Entries[e].Indices.push_back(indexBase + in[iCount]);
 						m_Entries[e].Indices.push_back(indexBase + in[iCount + 1]);
 						m_Entries[e].Indices.push_back(indexBase + in[iCount + 2]);
@@ -347,9 +338,7 @@ bool VulkanMeshLoader::LoadGLTFMesh(const std::string& fileName)
 
 				// -------- Attributes -----------
 
-				Vertex vertex;
-				m_Entries[e].Vertices.clear();
-	
+				m_Entries[e].Vertices.clear();	
 
 				for (auto& attribute : primitive.attributes)
 				{
@@ -368,13 +357,10 @@ bool VulkanMeshLoader::LoadGLTFMesh(const std::string& fileName)
 					auto last = buffer.data.begin() + bufferOffset + bufferLength;
 					std::vector<Byte> data = std::vector<Byte>(first, last);
 
-					vkMeshLoader::EVertexAttributeType attributeType;
-
 					// -------- Position attribute -----------
 
 					if (attribute.first.compare("POSITION") == 0)
 					{
-						attributeType = vkMeshLoader::EVertexAttributeType::POSITION;
 						int positionCount = accessor.count;
 						// Update mesh entry
 						m_Entries[e].vertexBase = numVertices;
@@ -388,7 +374,7 @@ bool VulkanMeshLoader::LoadGLTFMesh(const std::string& fileName)
 						for (auto p = 0; p < positionCount; ++p)
 						{
 							positions[p] = glm::vec3(matrix * glm::vec4(positions[p], 1.0f));
-							m_verticePositions.push_back(glm::vec4(positions[p], 1.0f));
+							m_sceneAttributes.m_verticePositions.push_back(glm::vec4(positions[p], 1.0f));
 							m_Entries[e].Vertices[p].m_pos = positions[p];
 
 							dim.max.x = fmax(positions[p].x, dim.max.x);
@@ -408,7 +394,6 @@ bool VulkanMeshLoader::LoadGLTFMesh(const std::string& fileName)
 
 					else if (attribute.first.compare("NORMAL") == 0)
 					{
-						attributeType = vkMeshLoader::EVertexAttributeType::NORMAL;
 						int normalCount = accessor.count;
 						if (m_Entries[e].Vertices.size() == 0) {
 							m_Entries[e].Vertices.resize(normalCount);
@@ -418,7 +403,7 @@ bool VulkanMeshLoader::LoadGLTFMesh(const std::string& fileName)
 						for (auto p = 0; p < normalCount; ++p)
 						{
 							normals[p] = glm::normalize(matrixNormal * glm::vec4(normals[p], 1.0f));
-							m_verticeNormals.push_back(glm::vec4(normals[p], 0.0f));
+							m_sceneAttributes.m_verticeNormals.push_back(glm::vec4(normals[p], 0.0f));
 							m_Entries[e].Vertices[p].m_normal = normals[p];
 
 						}
@@ -428,8 +413,6 @@ bool VulkanMeshLoader::LoadGLTFMesh(const std::string& fileName)
 
 					else if (attribute.first.compare("TEXCOORD_0") == 0)
 					{
-						attributeType = vkMeshLoader::EVertexAttributeType::TEXCOORD;
-
 						int texcoordCount = accessor.count;
 						if (m_Entries[e].Vertices.size() == 0) {
 							m_Entries[e].Vertices.resize(texcoordCount);
@@ -442,21 +425,12 @@ bool VulkanMeshLoader::LoadGLTFMesh(const std::string& fileName)
 						}
 					}
 
-					vkMeshLoader::VertexAttributeInfo attributeInfo = {
-						accessor.byteStride,
-						accessor.count,
-						componentLength,
-						componentTypeByteSize
-					};
-					geom->vertexAttributes.insert(std::make_pair(attributeType, attributeInfo));
-					geom->vertexData.insert(std::make_pair(attributeType, data));
-
 					// ----------Materials-------------
 
 					//TextureData* dev_diffuseTex = NULL;
 					int diffuseTexWidth = 0;
 					int diffuseTexHeight = 0;
-					vkMeshLoader::GLTFMaterial material;
+					SMaterial material;
 					if (!primitive.material.empty())
 					{
 						const tinygltf::Material &mat = scene.materials.at(primitive.material);
@@ -481,47 +455,45 @@ bool VulkanMeshLoader::LoadGLTFMesh(const std::string& fileName)
 							else
 							{
 								auto diff = mat.values.at("diffuse").number_array;
-								material.diffuse = glm::vec4(diff.at(0), diff.at(1), diff.at(2), diff.at(3));
+								material.m_diffuse = glm::vec4(diff.at(0), diff.at(1), diff.at(2), diff.at(3));
 							}
 						}
 
 						if (mat.values.find("ambient") != mat.values.end())
 						{
 							auto amb = mat.values.at("ambient").number_array;
-							material.ambient = glm::vec4(amb.at(0), amb.at(1), amb.at(2), amb.at(3));
+							material.m_ambient = glm::vec4(amb.at(0), amb.at(1), amb.at(2), amb.at(3));
 						}
 						if (mat.values.find("emission") != mat.values.end())
 						{
 							auto em = mat.values.at("emission").number_array;
-							material.emission = glm::vec4(em.at(0), em.at(1), em.at(2), em.at(3));
+							material.m_emission = glm::vec4(em.at(0), em.at(1), em.at(2), em.at(3));
 
 						}
 						if (mat.values.find("specular") != mat.values.end())
 						{
 							auto spec = mat.values.at("specular").number_array;
-							material.specular = glm::vec4(spec.at(0), spec.at(1), spec.at(2), spec.at(3));
+							material.m_specular = glm::vec4(spec.at(0), spec.at(1), spec.at(2), spec.at(3));
 
 						}
 						if (mat.values.find("shininess") != mat.values.end())
 						{
-							material.shininess = mat.values.at("shininess").number_array.at(0);
+							material.m_shininess = mat.values.at("shininess").number_array.at(0);
 						}
 
 						if (mat.values.find("transparency") != mat.values.end())
 						{
-							material.transparency = mat.values.at("transparency").number_array.at(0);
+							material.m_transparency = mat.values.at("transparency").number_array.at(0);
 						}
 						else
 						{
-							material.transparency = 1.0f;
+							material.m_transparency = 1.0f;
 						}
 
-						materials.push_back(material);
+						m_sceneAttributes.m_materials.push_back(material);
 						++materialId;
 					}
 				}
-
-				meshesData.push_back(geom);
 			}
 		}
 	}

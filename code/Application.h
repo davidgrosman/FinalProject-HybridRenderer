@@ -40,7 +40,8 @@ public:
 protected:
 	int m_width;
 	int m_height;
-    
+	std::string m_title;
+
 	GLFWwindow* m_window;
 
 	int		m_frame;

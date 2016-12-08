@@ -10,6 +10,8 @@
 Compiled using Microsoft (R) C/C++ Optimizing Compiler Version 18.00.21005.1 for
 x86 which is my default VS2013 compiler.
 
+This code is adapted from Sascha Willems's Vulkan Example: https://github.com/SaschaWillems/Vulkan 
+
 This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
 
 */
@@ -45,10 +47,7 @@ This code is licensed under the MIT license (MIT) (http://opensource.org/license
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
-#if defined(__ANDROID__)
-#include <android/asset_manager.h>
-#endif
+#include "GfxScene.h"
 
 namespace vkMeshLoader
 {
@@ -130,52 +129,6 @@ namespace vkMeshLoader
 		glm::vec3 m_scale;
 		glm::vec2 m_uvscale;
 	};
-
-	// ---------
-	// VERTEX
-	// ----------
-
-	typedef enum
-	{
-		INDEX,
-		POSITION,
-		NORMAL,
-		TEXCOORD
-	} EVertexAttributeType;
-
-	typedef struct VertexAttributeInfoTyp
-	{
-		size_t byteStride;
-		size_t count;
-		int componentLength;
-		int componentTypeByteSize;
-
-	} VertexAttributeInfo;
-
-	// ---------
-	// GEOMETRY
-	// ----------
-
-	struct GLTFMeshData
-	{
-		std::map<EVertexAttributeType, std::vector<Byte>> vertexData;
-		std::map<EVertexAttributeType, VertexAttributeInfo> vertexAttributes;
-	};
-
-	// ---------
-	// MATERIAL
-	// ----------
-
-	typedef struct MaterialTyp
-	{
-		glm::vec4 diffuse;
-		glm::vec4 ambient;
-		glm::vec4 emission;
-		glm::vec4 specular;
-		float shininess;
-		float transparency;
-		glm::ivec2 _pad;
-	} GLTFMaterial;
 }
 
 // Simple mesh class for getting all the necessary stuff from models loaded via ASSIMP
@@ -247,11 +200,7 @@ public:
 	const aiScene* pScene;
 
 	// For gltf mesh
-	std::vector<vkMeshLoader::GLTFMeshData*> meshesData;
-	std::vector<vkMeshLoader::GLTFMaterial> materials;
-	std::vector<glm::ivec4> m_indices;
-	std::vector<glm::vec4> m_verticePositions;
-	std::vector<glm::vec4> m_verticeNormals;
+	SSceneAttributes m_sceneAttributes;
 
 	void createBuffers( vk::VulkanDevice* vkDevice,
 		vkMeshLoader::MeshBuffer* meshBuffer,

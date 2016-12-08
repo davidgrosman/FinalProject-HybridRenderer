@@ -272,54 +272,31 @@ VkBool32 VulkanRenderer::createBuffer(VkBufferUsageFlags usageFlags, VkDeviceSiz
 	}
 }
 
-void VulkanRenderer::loadMesh(std::string filename, vkMeshLoader::MeshBuffer * meshBuffer, std::vector<vkMeshLoader::VertexLayout> vertexLayout, vkMeshLoader::MeshCreateInfo *meshCreateInfo)
-{
-	VulkanMeshLoader *mesh = new VulkanMeshLoader();
-	mesh->LoadMesh(filename);
-
-	VkCommandBuffer copyCmd = VulkanRenderer::createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, false);
-
-	mesh->createBuffers(
-		m_vulkanDevice,
-		meshBuffer,
-		vertexLayout,
-		meshCreateInfo,
-		true,
-		copyCmd,
-		m_queue);
-
-	vkFreeCommandBuffers(m_device, m_cmdPool, 1, &copyCmd);
-
-	meshBuffer->dim = mesh->dim.size;
-
-	delete(mesh);
-}
-
-void VulkanRenderer::loadMeshAsTriangleSoup(std::string filename, std::vector<glm::ivec4>& outIndices, std::vector<glm::vec4>& outPositions, std::vector<glm::vec4>& outNormals, vkMeshLoader::MeshBuffer *meshBuffer, std::vector<vkMeshLoader::VertexLayout> vertexLayout,
-	vkMeshLoader::MeshCreateInfo *meshCreateInfo)
+void VulkanRenderer::loadMesh(std::string filename, vkMeshLoader::MeshBuffer * meshBuffer, SSceneAttributes* meshAttributes, std::vector<vkMeshLoader::VertexLayout> vertexLayout, vkMeshLoader::MeshCreateInfo *meshCreateInfo)
 {
 	VulkanMeshLoader *mesh = new VulkanMeshLoader();
 	mesh->LoadMesh(filename);
 	
-	outIndices = mesh->m_indices;
-	outPositions = mesh->m_verticePositions;
-	outNormals = mesh->m_verticeNormals;
+	if (meshAttributes != nullptr) {
+		*meshAttributes = mesh->m_sceneAttributes;
+	}
 
-	VkCommandBuffer copyCmd = VulkanRenderer::createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, false);
+	if (meshBuffer != nullptr) {
+		VkCommandBuffer copyCmd = VulkanRenderer::createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, false);
 
-	mesh->createBuffers(
-		m_vulkanDevice,
-		meshBuffer,
-		vertexLayout,
-		meshCreateInfo,
-		true,
-		copyCmd,
-		m_queue);
+		mesh->createBuffers(
+			m_vulkanDevice,
+			meshBuffer,
+			vertexLayout,
+			meshCreateInfo,
+			true,
+			copyCmd,
+			m_queue);
 
-	vkFreeCommandBuffers(m_device, m_cmdPool, 1, &copyCmd);
+		vkFreeCommandBuffers(m_device, m_cmdPool, 1, &copyCmd);
 
-	meshBuffer->dim = mesh->dim.size;
-
+		meshBuffer->dim = mesh->dim.size;
+	}
 	delete(mesh);
 }
 

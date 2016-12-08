@@ -100,6 +100,7 @@ layout (std140, binding = 7) uniform UBO
 {
 	vec4 cameraPosition;
 	Light lights[6];
+	int lightCount;
 } ubo;
 
 
@@ -470,6 +471,9 @@ void main()
 	// Shade first intersection
 	for (int i = 0; i < 1; ++i) {
 					
+		if (i >= ubo.lightCount) {
+			break;
+		}
 		vec3 lightVec = vec3(normalize(ubo.lights[i].position - position));
 		float diffuse = lightDiffuse(vec3(normal), lightVec);
 		path.color *= diffuse;	
@@ -479,7 +483,7 @@ void main()
 		feeler.origin = vec3(position);
 		feeler.direction = lightVec;
 		float t = length(ubo.lights[i].position - position);
-		path.color *= calcShadow(feeler, 0, t);
+		path.color *= calcShadow(feeler, 0, t) * ubo.lights[i].color;
 	}
 
 	// Trace ray

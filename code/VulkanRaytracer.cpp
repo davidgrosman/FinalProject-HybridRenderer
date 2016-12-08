@@ -2,6 +2,20 @@
 #include "Utilities.h"
 #include "VulkanDeferredRenderer.h"
 
+namespace
+{
+
+	// Vertex layout for this example
+	static std::vector<vkMeshLoader::VertexLayout> vertexLayout =
+	{
+		vkMeshLoader::VERTEX_LAYOUT_POSITION,
+		vkMeshLoader::VERTEX_LAYOUT_UV,
+		vkMeshLoader::VERTEX_LAYOUT_COLOR,
+		vkMeshLoader::VERTEX_LAYOUT_NORMAL,
+		vkMeshLoader::VERTEX_LAYOUT_TANGENT
+	};
+}
+
 VulkanRaytracer::VulkanRaytracer() : VulkanRenderer()
 {
 	m_appName = "Raytracer Renderer";
@@ -586,7 +600,7 @@ void VulkanRaytracer::prepareResources() {
 
 void VulkanRaytracer::loadMeshes()
 {
-	generateSceneAttributes(getAssetPath() + "models/gltfs/cornell/cornell.glb", m_sceneAttributes);
+	loadMesh(getAssetPath() + "models/gltfs/cornell/cornell.glb", nullptr, &m_sceneAttributes, vertexLayout);
 }
 
 // Prepare a texture target that is used to store compute shader calculations
