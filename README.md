@@ -105,6 +105,13 @@ _Notice the shadow from the light source onto the ground caused by using light f
 
  ### Models
 
+* [dragon](). Model is converted using the [Online 3D Converter](http://www.greentoken.de/onlineconv/?step=3&outfmt=collada) from [clara.io](https://clara.io/view/4fe511a4-8c52-49cf-b348-4664c547d9d). Source: Stanford University Computer Graphics Laboratory
+Scanner: Cyberware 3030 MS + spacetime analysis
+Number of scans: ~70
+Total size of scans: 2,748,318 points (about 5,500,000 triangles)
+Reconstruction: vrip (conservatively decimated)
+Size of reconstruction: 566,098 vertices, 1,132,830 triangles
+Comments: contains numerous small holes.
 * [glTF Sample Models](https://github.com/KhronosGroup/glTF/blob/master/sampleModels/README.md)
 * [octocat]() by [Sally Kong](https://sketchfab.com/models/cad2ffa5d8a24423ab246ee0916a7f3e). Model is converted using [obj2gltf](https://github.com/AnalyticalGraphicsInc/OBJ2GLTF).
 * [wolf]() by [Rachel Hwang](https://www.linkedin.com/in/rachel-hwang-84a3b989). Model is converted using [obj2gltf](https://github.com/AnalyticalGraphicsInc/OBJ2GLTF).
