@@ -50,12 +50,6 @@ struct Triangle
 	vec3 norm2;
 };
 
-struct Box
-{
-	mat4 transform;
-	mat4 invTransform;
-};
-
 struct Ray
 {
 	vec3 origin;
@@ -275,52 +269,6 @@ float triangleIntersect(
 	return t;
 }
 
-// Box ===========================================================
-
-float boxIntersect(
-	Box box, 
-	Ray ray,
-	out vec3 normal,
-    out vec3 hitPoint
-	) 
-{
-
-    float tmin = -1e38;
-    float tmax = 1e38;
-    vec3 tmin_n;
-    vec3 tmax_n;
-    
-	for (int xyz = 0; xyz < 3; ++xyz) {
-        float qdxyz = ray.direction[xyz];
-        /*if (glm::abs(qdxyz) > 0.00001f)*/ {
-            float t1 = (-0.5f - ray.origin[xyz]) / qdxyz;
-            float t2 = (+0.5f - ray.origin[xyz]) / qdxyz;
-            float ta = min(t1, t2);
-            float tb = max(t1, t2);
-            vec3 n;
-            n[xyz] = t2 < t1 ? +1 : -1;
-            if (ta > 0 && ta > tmin) {
-                tmin = ta;
-                tmin_n = n;
-            }
-            if (tb < tmax) {
-                tmax = tb;
-                tmax_n = n;
-            }
-        }
-    }
-
-    if (tmax >= tmin && tmax > 0) {
-        if (tmin <= 0) {
-            tmin = tmax;
-            tmin_n = tmax_n;
-        }
-		hitPoint = getPointOnRay(ray, tmin);
-		normal = vec3(tmin_n);
-		return tmin;
-    }
-    return -1;
-}
 
 // Intersection ===========================================================
 
@@ -370,7 +318,7 @@ Intersection computeIntersections(
 	return intersection;
 }
 
-float calcShadow(in Ray feeler, in int objectId, inout float t)
+float calcShadow(in Ray feeler, in int objectId, in float t)
 {
 	for (int i = 0; i < indicesAndMaterialID.length(); ++i) {
 		
@@ -385,10 +333,10 @@ float calcShadow(in Ray feeler, in int objectId, inout float t)
 		vec3 tmp_normal;
 		vec3 tmp_hitPoint;
 		float tTri = triangleIntersect(tri, feeler, tmp_normal, tmp_hitPoint);
-		if ((tTri > EPSILON) && (abs(tTri) < t))
+		if ((tTri > EPSILON) && (tTri < t))
 		{
 			t = tTri;
-			return 0.5;
+			return 0.0;
 		}
 	}
 
@@ -411,13 +359,12 @@ void shadeMaterial(
 
 			// For every light
 			for (int i = 0; i < 6; ++i) {
-					
+				if (i >= ubo.lightCount) {
+					break;
+				}
 				vec3 lightVec = normalize(vec3(ubo.lights[i].position) - intersect.hitPoint);
 				float diffuse = lightDiffuse(intersect.hitNormal, lightVec);
 				path.color *= diffuse;	
-
-				//// Reflect ray for next render pass
-				//scatterRay(path, intersect);
 
 				// Light feeler test
 				Ray feeler;
@@ -432,7 +379,7 @@ void shadeMaterial(
 		} else {
 			// Didn't hit anything
 			path.remainingBounces = 0;
-			path.color *= vec3(0.2, 0.2, 0.2);
+			//path.color *= vec3(0.2, 0.2, 0.2);
 		}
 	}
 }
@@ -483,7 +430,7 @@ void main()
 		float dist = length(lightVec);
 		
 		// Attenuation
-		float atten = ubo.lights[i].radius / (pow(dist, 2.0) + 1.0);
+		float atten = ubo.lights[i].radius / (pow(dist, 2.0));
 		float diffuse = lightDiffuse(normal, lightVec);
 		diffuseColor *= diffuse * atten;
 		
@@ -496,7 +443,7 @@ void main()
 		feeler.origin = vec3(position) + 0.01 * lightVec;
 		feeler.direction = lightVec;
 		float t = length(vec3(ubo.lights[i].position) - position);
-		//path.color *= calcShadow(feeler, 0, t);
+		path.color *= calcShadow(feeler, -1, t);
 	}
 
 	// Trace ray
