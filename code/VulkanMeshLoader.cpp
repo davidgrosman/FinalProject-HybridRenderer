@@ -43,7 +43,7 @@ VulkanMeshLoader::~VulkanMeshLoader()
 bool VulkanMeshLoader::LoadMesh(const std::string& filename, int flags)
 {
 	bool loadedMesh = false;
-	if (!nUtils::hasFileExt(filename.c_str(), "gltf"))
+	if (!nUtils::hasFileExt(filename.c_str(), "gltf") && !nUtils::hasFileExt(filename.c_str(), "glb"))
 	{
 		pScene = Importer.ReadFile(filename.c_str(), flags);
 		unsigned int versMjr = aiGetVersionMajor();
@@ -334,7 +334,7 @@ bool VulkanMeshLoader::LoadGLTFMesh(const std::string& fileName)
 					int indicesCount = indexAccessor.count;
 					uint16_t* in = reinterpret_cast<uint16_t*>(data.data());
 					
-					uint32_t indexBase = static_cast<uint32_t>(m_Entries[i].Indices.size());
+					uint32_t indexBase = static_cast<uint32_t>(m_Entries[e].Indices.size());
 					for (auto iCount = 0; iCount < indicesCount; iCount += 3)
 					{
 						m_indices.push_back(glm::ivec4(in[iCount], in[iCount + 1], in[iCount + 2], materialId));
