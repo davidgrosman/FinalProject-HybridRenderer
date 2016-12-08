@@ -69,11 +69,41 @@ bool VulkanMeshLoader::LoadMesh(const std::string& filename, int flags)
 					m_sceneAttributes.m_indices.push_back(glm::ivec4(m_Entries[i].Indices[iCount], m_Entries[i].Indices[iCount + 1], m_Entries[i].Indices[iCount + 2], materialID));
 				}
 
+				// Add to vertice positions and vertice normals
 				for (auto v : m_Entries[i].Vertices) {
 					m_sceneAttributes.m_verticePositions.push_back(glm::vec4(v.m_pos, 1));
 					m_sceneAttributes.m_verticeNormals.push_back(glm::vec4(v.m_normal, 1));
 				}
 			}
+
+			m_sceneAttributes.m_materials.resize(pScene->mNumMaterials);
+			for (auto m = 0; m < pScene->mNumMaterials; ++m) {
+				// Add to materials list
+				SMaterial material;
+				aiColor3D color;
+				pScene->mMaterials[m]->Get(AI_MATKEY_COLOR_DIFFUSE, color);
+				material.m_colorDiffuse = glm::vec4(color.r, color.g, color.b, 1.0f);
+				pScene->mMaterials[m]->Get(AI_MATKEY_COLOR_SPECULAR, color);
+				material.m_colorSpecular = glm::vec4(color.r, color.g, color.b, 1.0f);
+				pScene->mMaterials[m]->Get(AI_MATKEY_COLOR_EMISSIVE, color);
+				material.m_colorEmission = glm::vec4(color.r, color.g, color.b, 1.0f);
+				pScene->mMaterials[m]->Get(AI_MATKEY_COLOR_AMBIENT, color);
+				material.m_colorAmbient = glm::vec4(color.r, color.g, color.b, 1.0f);
+				pScene->mMaterials[m]->Get(AI_MATKEY_COLOR_TRANSPARENT, color);
+				material.m_colorTransparent = glm::vec4(color.r, color.g, color.b, 1.0f);
+				pScene->mMaterials[m]->Get(AI_MATKEY_COLOR_REFLECTIVE, color);
+				material.m_colorReflective = glm::vec4(color.r, color.g, color.b, 1.0f);
+
+				pScene->mMaterials[m]->Get(AI_MATKEY_REFLECTIVITY, material.m_reflectivity);
+				pScene->mMaterials[m]->Get(AI_MATKEY_REFRACTI, material.m_refracti);
+				if (material.m_colorTransparent.x > 0.0) {
+					material.m_refracti = 1.60;
+				}
+				pScene->mMaterials[m]->Get(AI_MATKEY_SHININESS_STRENGTH, material.m_shininess);
+
+				m_sceneAttributes.m_materials[m] = material;
+			}
+	
 			loadedMesh = true;
 		}
 	}
@@ -455,25 +485,25 @@ bool VulkanMeshLoader::LoadGLTFMesh(const std::string& fileName)
 							else
 							{
 								auto diff = mat.values.at("diffuse").number_array;
-								material.m_diffuse = glm::vec4(diff.at(0), diff.at(1), diff.at(2), diff.at(3));
+								material.m_colorDiffuse = glm::vec4(diff.at(0), diff.at(1), diff.at(2), diff.at(3));
 							}
 						}
 
 						if (mat.values.find("ambient") != mat.values.end())
 						{
 							auto amb = mat.values.at("ambient").number_array;
-							material.m_ambient = glm::vec4(amb.at(0), amb.at(1), amb.at(2), amb.at(3));
+							material.m_colorAmbient = glm::vec4(amb.at(0), amb.at(1), amb.at(2), amb.at(3));
 						}
 						if (mat.values.find("emission") != mat.values.end())
 						{
 							auto em = mat.values.at("emission").number_array;
-							material.m_emission = glm::vec4(em.at(0), em.at(1), em.at(2), em.at(3));
+							material.m_colorEmission = glm::vec4(em.at(0), em.at(1), em.at(2), em.at(3));
 
 						}
 						if (mat.values.find("specular") != mat.values.end())
 						{
 							auto spec = mat.values.at("specular").number_array;
-							material.m_specular = glm::vec4(spec.at(0), spec.at(1), spec.at(2), spec.at(3));
+							material.m_colorSpecular = glm::vec4(spec.at(0), spec.at(1), spec.at(2), spec.at(3));
 
 						}
 						if (mat.values.find("shininess") != mat.values.end())

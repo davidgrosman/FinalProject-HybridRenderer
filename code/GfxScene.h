@@ -23,13 +23,16 @@ This code is licensed under the MIT license (MIT) (http://opensource.org/license
 
 struct SMaterial
 {
-	glm::vec4	m_diffuse;
-	glm::vec4	m_ambient;
-	glm::vec4	m_emission;
-	glm::vec4	m_specular;
+	glm::vec4	m_colorDiffuse;
+	glm::vec4	m_colorAmbient;
+	glm::vec4	m_colorEmission;
+	glm::vec4	m_colorSpecular;
+	glm::vec4   m_colorReflective;
+	glm::vec4   m_colorTransparent;
 	float		m_shininess;
 	float		m_transparency;
-	glm::ivec2  _pad;
+	float		m_refracti;
+	float	    m_reflectivity;
 };
 
 struct SSceneAttributes

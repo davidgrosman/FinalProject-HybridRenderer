@@ -422,10 +422,10 @@ void VulkanDeferredRenderer::buildDeferredCommandBuffer()
 	vkCmdDrawIndexed(m_offScreenCmdBuffer, m_sceneMeshes.m_model.indexCount, 1, 0, 0, 0);
 
 	// Transparent Object
-	vkCmdBindDescriptorSets(m_offScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_offscreen, 0, 1, &m_descriptorSets.m_model, 0, NULL);
-	vkCmdBindVertexBuffers(m_offScreenCmdBuffer, VERTEX_BUFFER_BIND_ID, 1, &m_sceneMeshes.m_transparentObj.vertices.buf, offsets);
-	vkCmdBindIndexBuffer(m_offScreenCmdBuffer, m_sceneMeshes.m_transparentObj.indices.buf, 0, VK_INDEX_TYPE_UINT32);
-	vkCmdDrawIndexed(m_offScreenCmdBuffer, m_sceneMeshes.m_transparentObj.indexCount, 1, 0, 0, 0);
+	//vkCmdBindDescriptorSets(m_offScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_offscreen, 0, 1, &m_descriptorSets.m_model, 0, NULL);
+	//vkCmdBindVertexBuffers(m_offScreenCmdBuffer, VERTEX_BUFFER_BIND_ID, 1, &m_sceneMeshes.m_transparentObj.vertices.buf, offsets);
+	//vkCmdBindIndexBuffer(m_offScreenCmdBuffer, m_sceneMeshes.m_transparentObj.indices.buf, 0, VK_INDEX_TYPE_UINT32);
+	//vkCmdDrawIndexed(m_offScreenCmdBuffer, m_sceneMeshes.m_transparentObj.indexCount, 1, 0, 0, 0);
 
 	vkCmdEndRenderPass(m_offScreenCmdBuffer);
 
@@ -516,20 +516,27 @@ void VulkanDeferredRenderer::loadMeshes()
 {
 	{
 		vkMeshLoader::MeshCreateInfo meshCreateInfo;
-		meshCreateInfo.m_scale = glm::vec3(2.0f);
+		meshCreateInfo.m_scale = glm::vec3(10.0f);
 		meshCreateInfo.m_uvscale = glm::vec2(4.0f);
-		meshCreateInfo.m_pos = glm::vec3(0.0f, 2.35f, 0.0f);
+		meshCreateInfo.m_pos = glm::vec3(0.0f, 1.f, 0.0f);
 		loadMesh(getAssetPath() + "models/plane.obj", &m_sceneMeshes.m_floor, nullptr, vertexLayout, &meshCreateInfo);
 	}
 
-	loadMesh(getAssetPath() + "models/gltfs/cornell/cornell.dae", &m_sceneMeshes.m_model, nullptr, vertexLayout);
+	{
+		vkMeshLoader::MeshCreateInfo meshCreateInfo;
+		meshCreateInfo.m_scale = glm::vec3(0.3f);
+
+		//loadMesh(getAssetPath() + "models/gltfs/cornell/cornell.dae", 
+		loadMesh(getAssetPath() + "models/octocat/octocat.dae", &m_sceneMeshes.m_model, nullptr, vertexLayout, &meshCreateInfo);
+	}
 
 	{
 		vkMeshLoader::MeshCreateInfo meshCreateInfo;
-		meshCreateInfo.m_scale = glm::vec3(2.0f);
-		meshCreateInfo.m_rotAxisAndAngle = glm::vec4(1.0f, 0.0f, 0.0f, M_PI);
-		meshCreateInfo.m_pos = glm::vec3(0.0f, 2.0f, 2.0f);
-		loadMesh(getAssetPath() + "models/gltfs/duck/duck.gltf", &m_sceneMeshes.m_transparentObj, nullptr, vertexLayout, &meshCreateInfo);
+		meshCreateInfo.m_scale = glm::vec3(0.3f);
+		meshCreateInfo.m_rotAxisAndAngle = glm::vec4(1, 0, 0, 0);
+		meshCreateInfo.m_pos = glm::vec3(0.0f, 0.f, 0.0f);
+
+		loadMesh(getAssetPath() + "models/gltfs/cornell/cornell.dae", &m_sceneMeshes.m_transparentObj, nullptr, vertexLayout, &meshCreateInfo);
 	}
 }
 
@@ -1004,10 +1011,8 @@ void VulkanDeferredRenderer::updateUniformBuffersScreen()
 void VulkanDeferredRenderer::updateUniformBufferDeferredMatrices(SRendererContext& context)
 {
 	m_uboOffscreenVS.m_model = glm::mat4();
-
 	m_uboOffscreenVS.m_projection = context.m_camera.m_matrices.m_projMtx;
 	m_uboOffscreenVS.m_view = context.m_camera.m_matrices.m_viewMtx;
-	m_uboOffscreenVS.m_model = glm::scale(glm::vec3(100));
 
 	uint8_t *pData;
 	VK_CHECK_RESULT(vkMapMemory(m_device, m_uniformData.m_vsOffscreen.memory, 0, sizeof(m_uboOffscreenVS), 0, (void **)&pData));
@@ -1023,32 +1028,32 @@ void VulkanDeferredRenderer::updateUniformBufferDeferredLights(SRendererContext&
 	float LIGHT_SPEED = 36.0f;
 
 	// White
-	m_uboFragmentLights.m_lights[0].position = glm::vec4(0.0f, 0.0f, 1.0f, 0.0f);
-	m_uboFragmentLights.m_lights[0].color = glm::vec3(1.5f);
-	m_uboFragmentLights.m_lights[0].radius = 15.0f * 0.25f;
+	m_uboFragmentLights.m_lights[0].position = glm::vec4(0.0f, -5.0f, 1.0f, 0.0f);
+	m_uboFragmentLights.m_lights[0].color = glm::vec3(1.1f);
+	m_uboFragmentLights.m_lights[0].radius = 10.0f;
 	// Red
-	m_uboFragmentLights.m_lights[1].position = glm::vec4(-2.0f, 0.0f, 0.0f, 0.0f);
+	m_uboFragmentLights.m_lights[1].position = glm::vec4(-2.0f, -5.0f, 0.0f, 0.0f);
 	m_uboFragmentLights.m_lights[1].color = glm::vec3(1.0f, 0.0f, 0.0f);
 	m_uboFragmentLights.m_lights[1].radius = 15.0f;
 	// Blue
-	m_uboFragmentLights.m_lights[2].position = glm::vec4(2.0f, 1.0f, 0.0f, 0.0f);
-	m_uboFragmentLights.m_lights[2].color = glm::vec3(0.0f, 0.0f, 2.5f);
-	m_uboFragmentLights.m_lights[2].radius = 5.0f;
-	// Yellow
-	m_uboFragmentLights.m_lights[3].position = glm::vec4(0.0f, 0.9f, 0.5f, 0.0f);
-	m_uboFragmentLights.m_lights[3].color = glm::vec3(1.0f, 1.0f, 0.0f);
-	m_uboFragmentLights.m_lights[3].radius = 2.0f;
-	// Green
-	m_uboFragmentLights.m_lights[4].position = glm::vec4(0.0f, 0.5f, 0.0f, 0.0f);
-	m_uboFragmentLights.m_lights[4].color = glm::vec3(0.0f, 1.0f, 0.2f);
-	m_uboFragmentLights.m_lights[4].radius = 5.0f;
-	// Yellow
-	m_uboFragmentLights.m_lights[5].position = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
-	m_uboFragmentLights.m_lights[5].color = glm::vec3(1.0f, 0.7f, 0.3f);
-	m_uboFragmentLights.m_lights[5].radius = 25.0f;
+	//m_uboFragmentLights.m_lights[2].position = glm::vec4(2.0f, 1.0f, 0.0f, 0.0f);
+	//m_uboFragmentLights.m_lights[2].color = glm::vec3(0.0f, 0.0f, 2.5f);
+	//m_uboFragmentLights.m_lights[2].radius = 5.0f;
+	//// Yellow
+	//m_uboFragmentLights.m_lights[3].position = glm::vec4(0.0f, 0.9f, 0.5f, 0.0f);
+	//m_uboFragmentLights.m_lights[3].color = glm::vec3(1.0f, 1.0f, 0.0f);
+	//m_uboFragmentLights.m_lights[3].radius = 2.0f;
+	//// Green
+	//m_uboFragmentLights.m_lights[4].position = glm::vec4(0.0f, 0.5f, 0.0f, 0.0f);
+	//m_uboFragmentLights.m_lights[4].color = glm::vec3(0.0f, 1.0f, 0.2f);
+	//m_uboFragmentLights.m_lights[4].radius = 5.0f;
+	//// Yellow
+	//m_uboFragmentLights.m_lights[5].position = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
+	//m_uboFragmentLights.m_lights[5].color = glm::vec3(1.0f, 0.7f, 0.3f);
+	//m_uboFragmentLights.m_lights[5].radius = 25.0f;
 
-	//m_uboFragmentLights.m_lights[0].position.x = sin(glm::radians(LIGHT_SPEED * timer)) * 5.0f;
-	//m_uboFragmentLights.m_lights[0].position.z = cos(glm::radians(LIGHT_SPEED * timer)) * 5.0f;
+	m_uboFragmentLights.m_lights[0].position.x = sin(glm::radians(LIGHT_SPEED * timer)) * 5.0f;
+	m_uboFragmentLights.m_lights[0].position.z = cos(glm::radians(LIGHT_SPEED * timer)) * 5.0f;
 
 	m_uboFragmentLights.m_lights[1].position.x = -4.0f + sin(glm::radians(LIGHT_SPEED * timer) + 45.0f) * 2.0f;
 	m_uboFragmentLights.m_lights[1].position.z = 0.0f + cos(glm::radians(LIGHT_SPEED * timer) + 45.0f) * 2.0f;
