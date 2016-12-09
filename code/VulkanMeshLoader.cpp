@@ -64,9 +64,8 @@ bool VulkanMeshLoader::LoadMesh(const std::string& filename, int flags)
 
 				// Add to indices
 				//@todo: Update material ID
-				unsigned int materialID = 0;
 				for (auto iCount = 0; iCount < m_Entries[i].Indices.size(); iCount += 3) {
-					m_sceneAttributes.m_indices.push_back(glm::ivec4(m_Entries[i].Indices[iCount], m_Entries[i].Indices[iCount + 1], m_Entries[i].Indices[iCount + 2], materialID));
+					m_sceneAttributes.m_indices.push_back(glm::ivec4(m_Entries[i].Indices[iCount], m_Entries[i].Indices[iCount + 1], m_Entries[i].Indices[iCount + 2], m_Entries[i].MaterialIndex));
 				}
 
 				// Add to vertice positions and vertice normals
@@ -513,11 +512,11 @@ bool VulkanMeshLoader::LoadGLTFMesh(const std::string& fileName)
 
 						if (mat.values.find("transparency") != mat.values.end())
 						{
-							material.m_transparency = mat.values.at("transparency").number_array.at(0);
+							material.m_refracti = mat.values.at("transparency").number_array.at(0);
 						}
 						else
 						{
-							material.m_transparency = 1.0f;
+							material.m_refracti = 1.0f;
 						}
 
 						m_sceneAttributes.m_materials.push_back(material);
@@ -616,6 +615,15 @@ void VulkanMeshLoader::createBuffers(
 					vertexBuffer.push_back(m_Entries[m].Vertices[i].m_tangent.y);
 					vertexBuffer.push_back(m_Entries[m].Vertices[i].m_tangent.z);
 				}
+
+				// Material ID normalized
+				if (layoutDetail == vkMeshLoader::VERTEX_LAYOUT_MATERIALID_NORMALIZED)
+				{
+					// Store material Id into the position vector to save space
+					float materialIdNormalized = m_Entries[m].MaterialIndex / (float)pScene->mNumMaterials;
+					vertexBuffer.push_back(materialIdNormalized);
+				}
+
 				// Bitangent
 				if (layoutDetail == vkMeshLoader::VERTEX_LAYOUT_BITANGENT)
 				{
@@ -623,11 +631,7 @@ void VulkanMeshLoader::createBuffers(
 					vertexBuffer.push_back(m_Entries[m].Vertices[i].m_binormal.y);
 					vertexBuffer.push_back(m_Entries[m].Vertices[i].m_binormal.z);
 				}
-				// Dummy layout components for padding
-				if (layoutDetail == vkMeshLoader::VERTEX_LAYOUT_DUMMY_FLOAT)
-				{
-					vertexBuffer.push_back(0.0f);
-				}
+
 				if (layoutDetail == vkMeshLoader::VERTEX_LAYOUT_DUMMY_VEC4)
 				{
 					vertexBuffer.push_back(0.0f);

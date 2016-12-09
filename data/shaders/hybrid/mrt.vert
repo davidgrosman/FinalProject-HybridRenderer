@@ -8,6 +8,7 @@ layout (location = 1) in vec2 inUV;
 layout (location = 2) in vec3 inColor;
 layout (location = 3) in vec3 inNormal;
 layout (location = 4) in vec3 inTangent;
+layout (location = 5) in float inMaterialIdNormalized;
 
 layout (binding = 0) uniform UBO 
 {
@@ -22,6 +23,7 @@ layout (location = 1) out vec2 outUV;
 layout (location = 2) out vec3 outColor;
 layout (location = 3) out vec3 outWorldPos;
 layout (location = 4) out vec3 outTangent;
+layout (location = 5) out float outMaterialIdNormalized;
 
 out gl_PerVertex
 {
@@ -30,6 +32,7 @@ out gl_PerVertex
 
 void main() 
 {
+	
 	vec4 tmpPos = inPos + ubo.instancePos[0];
 
 	gl_Position = ubo.projection * ubo.view * ubo.model * tmpPos;
@@ -49,4 +52,7 @@ void main()
 	
 	// Currently just vertex color
 	outColor = inColor;
+	
+	// Normalized to 0.0 and 1.0
+	outMaterialIdNormalized = inMaterialIdNormalized;
 }

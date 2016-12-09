@@ -11,9 +11,7 @@
 #define SQRT_OF_ONE_THIRD 0.5773502691896257645091487805019574556476
 #define EPSILON 0.0001
 #define MAXLEN 1000.0
-#define TRACEDEPTH 1
-
-vec3 LIGHT_POS = vec3(0, 0, 1);
+#define TRACEDEPTH 2
 
 // ===== STRUCT DEFINITION ===== //
 struct Light {
@@ -31,7 +29,6 @@ struct Material
 	vec4 colorReflective;
 	vec4 colorTransparent;
 	float shininess;
-	float transparency;
 	float refracti;
 	float reflectivity;
 };
@@ -99,6 +96,7 @@ layout (std140, binding = 7) uniform UBO
 	vec4 cameraPosition;
 	Light lights[6];
 	int lightCount;
+	int materialCount;
 } ubo;
 
 
@@ -270,7 +268,6 @@ float triangleIntersect(
 // Intersection ===========================================================
 
 Intersection computeIntersections(
-	int depth,
 	in Ray ray
 	)
 {
@@ -342,56 +339,75 @@ float calcShadow(in Ray feeler, in int objectId, in float t)
 }
 
 void shadeMaterial(
-	int iter,
 	in Intersection intersect,
 	inout PathSegment path
 	)
 {
-	if (path.remainingBounces > 0) {
-		if (intersect.t > 0.0) {
+	
+	Material material = materials[intersect.materialId];
 
-			Material mat = materials[intersect.materialId];
-			mat.diffuse = vec4(1, 0, 0, 1);
+	if (material.reflectivity > 0) {
+		path.ray.direction = normalize(reflect(path.ray.direction, intersect.hitNormal));
+		path.ray.origin = intersect.hitPoint + 0.01 * path.ray.direction;
+	}
 
-			// Shade color
+	if (material.refracti > 1) {
+		float ei = 1.0;
+		float et = material.refracti;
+		bool entering = dot(path.ray.direction, intersect.hitNormal) < 0;
+		if (!entering) {
+			float t = ei;
+			ei = et;
+			et = t;
+		}
 
-			// For every light
-			for (int i = 0; i < 6; ++i) {
-				if (i >= ubo.lightCount) {
-					break;
-				}
-				vec3 lightVec = normalize(vec3(ubo.lights[i].position) - intersect.hitPoint);
-				float diffuse = lightDiffuse(intersect.hitNormal, lightVec);
-				path.color *= diffuse;	
+		float eta = ei / et;
+		path.ray.origin = intersect.hitPoint;
+		path.ray.direction = refract(path.ray.direction, intersect.hitNormal, eta);
+	}
 
-				// Light feeler test
-				Ray feeler;
-				feeler.origin = intersect.hitPoint;
-				feeler.direction = lightVec;
-				float t = length(vec3(ubo.lights[i].position) - intersect.hitPoint);
-				path.color *= calcShadow(feeler, intersect.objectID, t);
+	if (true || (material.refracti != 1.0 || material.reflectivity == 0.0)) {
+
+		for (int i = 0; i < 1; ++i) {
+					
+			if (i >= ubo.lightCount) {
+				break;
 			}
 
-			path.remainingBounces -= 1;
-			
-		} else {
-			// Didn't hit anything
-			path.remainingBounces = 0;
-			//path.color *= vec3(0.2, 0.2, 0.2);
+			vec3 lightVec = normalize(vec3(ubo.lights[i].position) - intersect.hitPoint);
+			float dist = length(vec3(ubo.lights[i].position) - intersect.hitPoint);
+		
+			if (dist >= ubo.lights[i].radius) {
+				continue;
+			}
+
+			// Light feeler test
+			Ray feeler;
+			feeler.origin = intersect.hitPoint + 0.1 * lightVec;
+			feeler.direction = lightVec;
+			float shadow = calcShadow(feeler, -1, dist); 
+	
+			// Attenuation
+			float atten = ubo.lights[i].radius - dist;
+		
+			// Diffuse
+			float diffuse = lightDiffuse(intersect.hitNormal, lightVec);
+			vec3 diffuseColor = diffuse * vec3(material.diffuse);
+		
+			// Specular
+			float specular = lightSpecular(vec3(ubo.cameraPosition), intersect.hitNormal, lightVec, 1.0);
+			vec3 specularColor = specular * ubo.lights[i].color; 
+		
+			path.color = diffuseColor * ubo.lights[i].color;
+			path.color *= atten * shadow;
+
 		}
 	}
 }
 
 vec3 renderScene(inout PathSegment path)
 {
-	float t = MAXLEN;
-
-	// Compute intersection
-	Intersection intersect = computeIntersections(0, path.ray);	
 	
-	// Shade material and reflect ray
-	shadeMaterial(0, intersect, path);
-
 	return path.color;
 }
 
@@ -402,72 +418,46 @@ void main()
 
 	ivec2 dim = imageSize(resultImage);
 	vec2 uv = vec2(gl_GlobalInvocationID.xy) / dim;
+	
+	// Extract parameters from textures
 	vec3 position = texture(positionsImage, uv).rgb;
-	float alpha = texture(positionsImage, uv).a;
+	
+	// Here, materialId was normalized and packed as the fourth value
+	float materialIdNormalized = texture(positionsImage, uv).w;
+	int materialId = int(materialIdNormalized * float(ubo.materialCount));
 	vec3 normal = texture(normalsImage, uv).rgb;
 
 	// @todo: for now, store albedo here
 	vec3 diffuseColor = texture(materialIDsImage, uv).rgb;
 
+	// Terminate early if we didn't hit anything!
+	if (diffuseColor.r == 0 && diffuseColor.r == 0 && diffuseColor.r == 0) {
+		imageStore(resultImage, ivec2(gl_GlobalInvocationID.xy), vec4(0, 0, 0, 1.0));
+		return;	 
+	}
+
 	PathSegment path;
 	path.remainingBounces = TRACEDEPTH;
 	path.shouldTerminate = false;
+	path.ray.origin = position;
+	path.ray.direction = normalize(position - vec3(ubo.cameraPosition));
+	path.color = vec3(0,0,0);
 	
-	Ray ray;
-	ray.origin = position;
-	ray.direction = normalize(position - vec3(ubo.cameraPosition));
-	reflect(-ray.direction, normal);
-	path.ray = ray;
-	path.color = vec3(0, 0, 0);
-
-	// Shade first intersection
-	for (int i = 0; i < 1; ++i) {
-					
-		if (i >= ubo.lightCount) {
-			break;
-		}
-
-		vec3 lightVec = normalize(vec3(ubo.lights[i].position) - position);
-		float dist = length(vec3(ubo.lights[i].position) - position);
-		
-		if (dist >= ubo.lights[i].radius) {
-			continue;
-		}
-
-		// Light feeler test
-		Ray feeler;
-		feeler.origin = vec3(position) + 0.1 * lightVec;
-		feeler.direction = lightVec;
-		float shadow = calcShadow(feeler, -1, dist); 
-	
-		// Attenuation
-		float atten = ubo.lights[i].radius - dist;
-		
-		// Diffuse
-		float diffuse = lightDiffuse(normal, lightVec);
-		diffuseColor *= diffuse;
-		
-		// Specular
-		float specular = lightSpecular(vec3(ubo.cameraPosition), normal, lightVec, 1.0);
-		vec3 specularColor = specular * ubo.lights[i].color; 
-		
-		path.color = diffuseColor * ubo.lights[i].color;
-		path.color *= atten * shadow;
-
-	}
+	Intersection firstBounce;
+	firstBounce.hitPoint = position;
+	firstBounce.hitNormal = normal;
+	firstBounce.materialId = materialId;
 
 	// Trace ray
-	bool iterComplete = false;
-	
-	vec4 finalColor = vec4(path.color, 1);
+	bool iterComplete = false;	
 	int depth = 0;
 	while(!iterComplete) {
 		
 		// Reflect if material is reflective
-		//finalColor = vec4(renderScene(path), 1);
+		shadeMaterial(firstBounce, path);
 		iterComplete = depth > TRACEDEPTH;
 		depth++;
 	}
 
-	imageStore(resultImage, ivec2(gl_GlobalInvocationID.xy), finalColor);
+	imageStore(resultImage, ivec2(gl_GlobalInvocationID.xy), vec4(path.color, 1.0));
 }

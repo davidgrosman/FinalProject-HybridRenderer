@@ -10,7 +10,8 @@ namespace
 		vkMeshLoader::VERTEX_LAYOUT_UV,
 		vkMeshLoader::VERTEX_LAYOUT_COLOR,
 		vkMeshLoader::VERTEX_LAYOUT_NORMAL,
-		vkMeshLoader::VERTEX_LAYOUT_TANGENT
+		vkMeshLoader::VERTEX_LAYOUT_TANGENT,
+		vkMeshLoader::VERTEX_LAYOUT_MATERIALID_NORMALIZED,
 	};
 }
 
@@ -133,7 +134,7 @@ void VulkanHybridRenderer::shutdownVulkan()
 	VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_model.meshBuffer);
 	VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_floor.meshBuffer);
 	VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_quad);
-	VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_transparentObj.meshBuffer);
+	//VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_transparentObj.meshBuffer);
 
 	// Uniform buffers
 	vkUtils::destroyUniformData(m_device, &m_uniformData.m_vsOffscreen);
@@ -845,7 +846,7 @@ void VulkanHybridRenderer::loadMeshes()
 {
 	{
 		vkMeshLoader::MeshCreateInfo meshCreateInfo;
-		meshCreateInfo.m_scale = glm::vec3(1.0f);
+		meshCreateInfo.m_scale = glm::vec3(2.0f);
 		meshCreateInfo.m_uvscale = glm::vec2(4.0f);
 		meshCreateInfo.m_pos = glm::vec3(0.0f, 1.5f, 0.0f);
 		loadMesh(getAssetPath() + "models/plane.obj", &m_sceneMeshes.m_floor.meshBuffer, &m_sceneMeshes.m_floor.meshAttributes, vertexLayout, &meshCreateInfo);
@@ -856,16 +857,18 @@ void VulkanHybridRenderer::loadMeshes()
 
 		//loadMesh(getAssetPath() + "models/gltfs/cornell/cornell.dae", 
 		loadMesh(getAssetPath() + "models/knot/knot.dae", &m_sceneMeshes.m_model.meshBuffer, &m_sceneMeshes.m_model.meshAttributes, vertexLayout, &meshCreateInfo);
+		std::cout << "Number of vertices: " << m_sceneMeshes.m_model.meshAttributes.m_verticePositions.size() << std::endl;
+		std::cout << "Number of triangles: " << m_sceneMeshes.m_model.meshAttributes.m_verticePositions.size() / 3 << std::endl;
 	}
 
-	{
-		vkMeshLoader::MeshCreateInfo meshCreateInfo;
-		meshCreateInfo.m_scale = glm::vec3(0.3f);
-		meshCreateInfo.m_rotAxisAndAngle = glm::vec4(1, 0, 0, 0);
-		meshCreateInfo.m_pos = glm::vec3(0.0f, 0.f, 0.0f);
+	//{
+	//	vkMeshLoader::MeshCreateInfo meshCreateInfo;
+	//	meshCreateInfo.m_scale = glm::vec3(0.3f);
+	//	meshCreateInfo.m_rotAxisAndAngle = glm::vec4(1, 0, 0, 0);
+	//	meshCreateInfo.m_pos = glm::vec3(0.0f, 0.f, 0.0f);
 
-		loadMesh(getAssetPath() + "models/gltfs/cornell/cornell.dae", &m_sceneMeshes.m_transparentObj.meshBuffer, &m_sceneMeshes.m_transparentObj.meshAttributes, vertexLayout, &meshCreateInfo);
-	}
+	//	loadMesh(getAssetPath() + "models/gltfs/cornell/cornell.dae", &m_sceneMeshes.m_transparentObj.meshBuffer, &m_sceneMeshes.m_transparentObj.meshAttributes, vertexLayout, &meshCreateInfo);
+	//}
 
 
 	SMaterial temp;
@@ -881,7 +884,7 @@ void VulkanHybridRenderer::loadMeshes()
 		VK_VERTEX_INPUT_RATE_VERTEX);
 
 	// === Attribute descriptions
-	m_vertices.m_attributeDescriptions.resize(5);
+	m_vertices.m_attributeDescriptions.resize(vertexLayout.size());
 	// Location 0: Position
 	m_vertices.m_attributeDescriptions[0] =
 		vkUtils::initializers::vertexInputAttributeDescription(
@@ -917,6 +920,13 @@ void VulkanHybridRenderer::loadMeshes()
 		4,
 		VK_FORMAT_R32G32B32_SFLOAT,
 		sizeof(float) * 11);
+	// Location 5: Normalized material ID
+	m_vertices.m_attributeDescriptions[5] =
+		vkUtils::initializers::vertexInputAttributeDescription(
+		VERTEX_BUFFER_BIND_ID,
+		5,
+		VK_FORMAT_R32_SFLOAT,
+		sizeof(float) * 14);
 
 	m_vertices.m_inputState = vkUtils::initializers::pipelineVertexInputStateCreateInfo();
 	m_vertices.m_inputState.vertexBindingDescriptionCount = static_cast<uint32_t>(m_vertices.m_bindingDescriptions.size());
@@ -1682,8 +1692,9 @@ void VulkanHybridRenderer::updateUniformBufferRaytracing(SRendererContext& conte
 	m_compute.ubo.m_cameraPosition = glm::vec4(context.m_camera.m_position, 1);
 	for (int i = 0; i < 6; ++i) {
 		m_compute.ubo.m_lights[i] = m_uboFragmentLights.m_lights[i];
-		m_compute.ubo.m_lightCount = 1;
 	}
+	m_compute.ubo.m_lightCount = 1;
+	m_compute.ubo.m_materialCount = m_sceneMeshes.m_model.meshAttributes.m_materials.size();
 
 	uint8_t *pData;
 	VK_CHECK_RESULT(vkMapMemory(m_device, m_compute.m_buffers.ubo.memory, 0, sizeof(m_compute.ubo), 0, (void **)&pData));

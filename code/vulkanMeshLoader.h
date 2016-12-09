@@ -59,9 +59,9 @@ namespace vkMeshLoader
 		VERTEX_LAYOUT_COLOR = 0x2,
 		VERTEX_LAYOUT_UV = 0x3,
 		VERTEX_LAYOUT_TANGENT = 0x4,
-		VERTEX_LAYOUT_BITANGENT = 0x5,
-		VERTEX_LAYOUT_DUMMY_FLOAT = 0x6,
-		VERTEX_LAYOUT_DUMMY_VEC4 = 0x7
+		VERTEX_LAYOUT_MATERIALID_NORMALIZED = 0x5,
+		VERTEX_LAYOUT_BITANGENT = 0x6,
+		VERTEX_LAYOUT_DUMMY_VEC4 = 0x7,
 	};
 
 	/**
@@ -81,6 +81,10 @@ namespace vkMeshLoader
 				// UV only has two components
 			case VERTEX_LAYOUT_UV:
 				vSize += 2 * sizeof(float);
+				break;
+				// Normalized material ID is just float
+			case VERTEX_LAYOUT_MATERIALID_NORMALIZED:
+				vSize += sizeof(float);
 				break;
 			default:
 				vSize += 3 * sizeof(float);

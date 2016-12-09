@@ -30,9 +30,9 @@ struct SMaterial
 	glm::vec4   m_colorReflective;
 	glm::vec4   m_colorTransparent;
 	float		m_shininess;
-	float		m_transparency;
 	float		m_refracti;
 	float	    m_reflectivity;
+	float       _pad;
 };
 
 struct SSceneAttributes

@@ -253,7 +253,8 @@ private:
 			glm::vec4 m_cameraPosition;
 			SSceneLight m_lights[6];
 			uint32_t	m_lightCount;
-			glm::ivec3  _pad;
+			uint32_t    m_materialCount;
+			glm::ivec2  _pad;
 		} ubo;
 
 		VkSemaphore semaphore;
