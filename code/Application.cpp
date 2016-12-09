@@ -130,7 +130,7 @@ CSceneRenderApp::CSceneRenderApp(int width, int height/*, const std::string& sce
 {
 	Camera& cam = m_context.m_camera;
 	{
-		cam.m_position = {0.f, 2.5f, -5.f };
+		cam.m_position = {0.f, 2.5f, -10.f };
 		cam.setRotation(glm::vec3(0.f, 0.f, 0.0f));
 		cam.setPerspective(60.0f, width / (float)height, 0.1f, 1000.0f);
 	}

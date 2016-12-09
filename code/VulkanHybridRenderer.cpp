@@ -619,7 +619,7 @@ void VulkanHybridRenderer::buildDeferredCommandBuffer()
 	vkCmdBindDescriptorSets(m_offScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_offscreen, 0, 1, &m_descriptorSets.m_model, 0, NULL);
 	vkCmdBindVertexBuffers(m_offScreenCmdBuffer, VERTEX_BUFFER_BIND_ID, 1, &m_sceneMeshes.m_floor.meshBuffer.vertices.buf, offsets);
 	vkCmdBindIndexBuffer(m_offScreenCmdBuffer, m_sceneMeshes.m_floor.meshBuffer.indices.buf, 0, VK_INDEX_TYPE_UINT32);
-	vkCmdDrawIndexed(m_offScreenCmdBuffer, m_sceneMeshes.m_floor.meshBuffer.indexCount, 1, 0, 0, 0);
+	vkCmdDrawIndexed(m_offScreenCmdBuffer, m_sceneMeshes.m_floor.meshBuffer.indexCount, 3, 0, 0, 0);
 
 	// Object
 	vkCmdBindDescriptorSets(m_offScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_offscreen, 0, 1, &m_descriptorSets.m_model, 0, NULL);
@@ -845,7 +845,7 @@ void VulkanHybridRenderer::loadMeshes()
 {
 	{
 		vkMeshLoader::MeshCreateInfo meshCreateInfo;
-		meshCreateInfo.m_scale = glm::vec3(10.0f);
+		meshCreateInfo.m_scale = glm::vec3(1.0f);
 		meshCreateInfo.m_uvscale = glm::vec2(4.0f);
 		meshCreateInfo.m_pos = glm::vec3(0.0f, 1.5f, 0.0f);
 		loadMesh(getAssetPath() + "models/plane.obj", &m_sceneMeshes.m_floor.meshBuffer, &m_sceneMeshes.m_floor.meshAttributes, vertexLayout, &meshCreateInfo);
@@ -855,7 +855,7 @@ void VulkanHybridRenderer::loadMeshes()
 		vkMeshLoader::MeshCreateInfo meshCreateInfo;
 
 		//loadMesh(getAssetPath() + "models/gltfs/cornell/cornell.dae", 
-		loadMesh(getAssetPath() + "models/cornell_knot/cornell_knot.dae", &m_sceneMeshes.m_model.meshBuffer, &m_sceneMeshes.m_model.meshAttributes, vertexLayout, &meshCreateInfo);
+		loadMesh(getAssetPath() + "models/knot/knot.dae", &m_sceneMeshes.m_model.meshBuffer, &m_sceneMeshes.m_model.meshAttributes, vertexLayout, &meshCreateInfo);
 	}
 
 	{
@@ -1559,6 +1559,8 @@ void VulkanHybridRenderer::setupUniformBuffers(SRendererContext& context)
 
 	// Init some values
 	m_uboOffscreenVS.m_instancePos[0] = glm::vec4(0.0f);
+	//m_uboOffscreenVS.m_instancePos[1] = glm::vec4(-11.0f, -1.f, -4.f, 1.f);
+	//m_uboOffscreenVS.m_instancePos[2] = glm::vec4(-20.0f, 2.f, 0.f, 1.f);
 
 	// ====== COMPUTE UBO
 	VkDeviceSize bufferSize = sizeof(m_compute.ubo);
@@ -1627,9 +1629,9 @@ void VulkanHybridRenderer::updateUniformBufferDeferredLights(SRendererContext& c
 	float SPEED = 36.0f;
 
 	// White
-	m_uboFragmentLights.m_lights[0].position = glm::vec4(0.0f, 0.0f, 1.0f, 0.0f);
-	m_uboFragmentLights.m_lights[0].color = glm::vec3(0.8f, 0.8f, 0.7f);
-	m_uboFragmentLights.m_lights[0].radius = 2.0f;
+	m_uboFragmentLights.m_lights[0].position = glm::vec4(0.0f, -5.0f, 1.0f, 0.0f);
+	m_uboFragmentLights.m_lights[0].color = glm::vec3(1.1f, 1.1f, 0.9f);
+	m_uboFragmentLights.m_lights[0].radius = 10.0f;
 	// Red
 	m_uboFragmentLights.m_lights[1].position = glm::vec4(-2.0f, -5.0f, 0.0f, 0.0f);
 	m_uboFragmentLights.m_lights[1].color = glm::vec3(1.0f, 0.0f, 0.0f);

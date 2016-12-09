@@ -14,7 +14,7 @@ layout (binding = 0) uniform UBO
 	mat4 projection;
 	mat4 model;
 	mat4 view;
-	vec4 instancePos[1];
+	vec4 instancePos[3];
 } ubo;
 
 layout (location = 0) out vec3 outNormal;
@@ -30,7 +30,7 @@ out gl_PerVertex
 
 void main() 
 {
-	vec4 tmpPos = inPos + ubo.instancePos[gl_InstanceIndex];
+	vec4 tmpPos = inPos + ubo.instancePos[0];
 
 	gl_Position = ubo.projection * ubo.view * ubo.model * tmpPos;
 	

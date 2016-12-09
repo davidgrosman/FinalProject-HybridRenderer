@@ -30,7 +30,7 @@ out gl_PerVertex
 
 void main() 
 {
-	vec4 tmpPos = inPos + ubo.instancePos[0];
+	vec4 tmpPos = inPos + ubo.instancePos[gl_InstanceIndex];
 
 	gl_Position = ubo.projection * ubo.view * ubo.model * tmpPos;
 	

@@ -121,7 +121,7 @@ private:
 		glm::mat4 m_projection;
 		glm::mat4 m_model;
 		glm::mat4 m_view;
-		glm::vec4 m_instancePos[1];
+		glm::vec4 m_instancePos[3];
 	};
 
 	struct SFragShaderUniforms
