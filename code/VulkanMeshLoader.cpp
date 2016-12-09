@@ -54,6 +54,7 @@ bool VulkanMeshLoader::LoadMesh(const std::string& filename, int flags)
 		{
 			m_Entries.clear();
 			m_Entries.resize(pScene->mNumMeshes);
+			int currentIndexCount = 0;
 			// Read in all meshes in the scene
 			for (auto i = 0; i < m_Entries.size(); i++)
 			{
@@ -63,10 +64,16 @@ bool VulkanMeshLoader::LoadMesh(const std::string& filename, int flags)
 				InitMesh(&m_Entries[i], paiMesh, pScene);
 
 				// Add to indices
-				//@todo: Update material ID
 				for (auto iCount = 0; iCount < m_Entries[i].Indices.size(); iCount += 3) {
-					m_sceneAttributes.m_indices.push_back(glm::ivec4(m_Entries[i].Indices[iCount], m_Entries[i].Indices[iCount + 1], m_Entries[i].Indices[iCount + 2], m_Entries[i].MaterialIndex));
+					m_sceneAttributes.m_indices.push_back(
+						glm::ivec4(
+							m_Entries[i].Indices[iCount] + currentIndexCount, 
+							m_Entries[i].Indices[iCount + 1] + currentIndexCount, 
+							m_Entries[i].Indices[iCount + 2] + currentIndexCount, 
+							// Packed 4th element as material index
+							m_Entries[i].MaterialIndex));
 				}
+				currentIndexCount += m_Entries[i].Indices.size();
 
 				// Add to vertice positions and vertice normals
 				for (auto v : m_Entries[i].Vertices) {
