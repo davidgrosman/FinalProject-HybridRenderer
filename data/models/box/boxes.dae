@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
-  <asset><contributor><author></author><authoring_tool>FBX COLLADA exporter</authoring_tool><comments></comments></contributor><created>2016-12-09T09:48:26Z</created><keywords></keywords><modified>2016-12-09T09:48:26Z</modified><revision></revision><subject></subject><title></title><unit meter="0.010000" name="centimeter"></unit><up_axis>Y_UP</up_axis></asset>
+  <asset><contributor><author></author><authoring_tool>FBX COLLADA exporter</authoring_tool><comments></comments></contributor><created>2016-12-09T10:01:33Z</created><keywords></keywords><modified>2016-12-09T10:01:33Z</modified><revision></revision><subject></subject><title></title><unit meter="0.010000" name="centimeter"></unit><up_axis>Y_UP</up_axis></asset>
   <library_materials>
     <material id="yellow" name="yellow">
       <instance_effect url="#yellow-fx"/>
@@ -269,7 +269,7 @@
   </library_geometries>
   <library_visual_scenes>
     <visual_scene id="boxes" name="boxes">
-      <node name="pCube1" id="pCube1" sid="pCube1"><matrix sid="matrix">380.000000 0.000000 0.000000 0.000000 0.000000 380.000000 0.000000 131.493195 0.000000 0.000000 100.000000 -291.164154 0.000000 0.000000 0.000000 1.000000</matrix><instance_geometry url="#pCube1-lib"><bind_material><technique_common><instance_material symbol="yellow" target="#yellow"/></technique_common></bind_material></instance_geometry><extra><technique profile="FCOLLADA"><visibility>1.000000</visibility></technique></extra></node>
+      <node name="pCube1" id="pCube1" sid="pCube1"><matrix sid="matrix">364.553857 0.000000 60.716121 0.000000 0.000000 380.000000 0.000000 131.493195 -107.240315 0.000000 206.399021 -361.807983 0.000000 0.000000 0.000000 1.000000</matrix><instance_geometry url="#pCube1-lib"><bind_material><technique_common><instance_material symbol="yellow" target="#yellow"/></technique_common></bind_material></instance_geometry><extra><technique profile="FCOLLADA"><visibility>1.000000</visibility></technique></extra></node>
       <node name="pCube2" id="pCube2" sid="pCube2"><matrix sid="matrix">50.000000 -14.644661 85.355339 0.000000 50.000000 85.355339 -14.644661 200.000000 -70.710678 50.000000 50.000000 0.000000 0.000000 0.000000 0.000000 1.000000</matrix><instance_geometry url="#pCube2-lib"><bind_material><technique_common><instance_material symbol="glass" target="#glass"/></technique_common></bind_material></instance_geometry><extra><technique profile="FCOLLADA"><visibility>1.000000</visibility></technique></extra></node>
       <extra><technique profile="MAX3D"><frame_rate>24.000000</frame_rate></technique><technique profile="FCOLLADA"><start_time>0.041667</start_time><end_time>8.333333</end_time></technique></extra>
     </visual_scene>
