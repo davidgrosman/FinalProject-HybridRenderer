@@ -853,7 +853,6 @@ void VulkanHybridRenderer::loadMeshes()
 
 	{
 		vkMeshLoader::MeshCreateInfo meshCreateInfo;
-		meshCreateInfo.m_scale = glm::vec3(100.f);
 
 		//loadMesh(getAssetPath() + "models/gltfs/cornell/cornell.dae", 
 		loadMesh(getAssetPath() + "models/cornell_knot/cornell_knot.dae", &m_sceneMeshes.m_model.meshBuffer, &m_sceneMeshes.m_model.meshAttributes, vertexLayout, &meshCreateInfo);
@@ -977,7 +976,6 @@ void VulkanHybridRenderer::loadMeshes()
 		glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)
 	};
 	bufferSize = m_sceneMeshes.m_model.meshAttributes.m_verticePositions.size() * sizeof(glm::vec4);
-	//bufferSize = 3 * sizeof(glm::vec4);
 
 	createBuffer(
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -1016,7 +1014,6 @@ void VulkanHybridRenderer::loadMeshes()
 	};
 
 	bufferSize = m_sceneMeshes.m_model.meshAttributes.m_verticeNormals.size() * sizeof(glm::vec4);
-	//bufferSize = 3 * sizeof(glm::vec4);
 
 	createBuffer(
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -1630,7 +1627,7 @@ void VulkanHybridRenderer::updateUniformBufferDeferredLights(SRendererContext& c
 	float SPEED = 36.0f;
 
 	// White
-	m_uboFragmentLights.m_lights[0].position = glm::vec4(0.0f, -10.0f, 1.0f, 0.0f);
+	m_uboFragmentLights.m_lights[0].position = glm::vec4(0.0f, 0.0f, 1.0f, 0.0f);
 	m_uboFragmentLights.m_lights[0].color = glm::vec3(0.8f, 0.8f, 0.7f);
 	m_uboFragmentLights.m_lights[0].radius = 2.0f;
 	// Red
