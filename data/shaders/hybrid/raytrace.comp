@@ -11,7 +11,7 @@
 #define SQRT_OF_ONE_THIRD 0.5773502691896257645091487805019574556476
 #define EPSILON 0.0001
 #define MAXLEN 1000.0
-#define TRACEDEPTH 1
+#define TRACEDEPTH 4
 
 // ===== STRUCT DEFINITION ===== //
 struct Light {
@@ -357,24 +357,7 @@ void shadeMaterial(
 
 	Material material = materials[intersect.materialId];
 
-	if (material.refracti > 1.2) {
-		float ei = 1.0;
-		float et = material.refracti;
-		bool entering = dot(path.ray.direction, intersect.hitNormal) < 0;
-		if (!entering) {
-			float t = ei;
-			ei = et;
-			et = t;
-		}
 
-		float eta = ei / et;
-		path.ray.direction = normalize(refract(path.ray.direction, intersect.hitNormal, eta));
-		path.ray.origin = intersect.hitPoint + 0.01 * path.ray.direction;
-		path.remainingBounces--;
-
-	} else {
-		path.remainingBounces = 0;
-	}
 		for (int i = 0; i < 10; ++i) {
 					
 			if (i >= ubo.lightCount) {
@@ -390,19 +373,19 @@ void shadeMaterial(
 
 			// Light feeler test
 			Ray feeler;
-			feeler.origin = intersect.hitPoint + 0.9 * intersect.hitNormal;
+			feeler.origin = intersect.hitPoint + 0.001 * intersect.hitNormal;
 			feeler.direction = lightVec;
 			
 			// @note: only compute shadows for the ground
 			float shadow = 1;
-			if (intersect.materialId == 2) {
+			if (intersect.materialId == 3) {
 				shadow = calcShadow(feeler, intersect.materialId, dist); 
 			}
 	
 			// Attenuation
-			float atten = ubo.lights[i].radius - dist;
+			float atten = ubo.lights[i].radius - dist;//ubo.lights[i].radius / (pow(dist, 2.0) + 1.0);
 		
-			// Diffuse
+			// Diffuse195
 			float diffuse = lightDiffuse(intersect.hitNormal, lightVec);
 			vec3 diffuseColor = diffuse * vec3(material.diffuse);
 		
@@ -414,7 +397,25 @@ void shadeMaterial(
 			path.color *= shadow * atten;
 		}
 	
+		if (material.refracti > 1.2) {
+		float ei = 1.0;
+		float et = 1.1;//material.refracti;
+		bool entering = dot(path.ray.direction, intersect.hitNormal) < 0;
+		if (!entering) {
+			float t = ei;
+			ei = et;
+			et = t;
+		}
 
+		float eta = ei / et;
+		path.ray.direction = normalize(refract(path.ray.direction, intersect.hitNormal, eta));
+		path.ray.origin = intersect.hitPoint + 0.001 * path.ray.direction;
+		path.remainingBounces--;
+		path.color *= clamp(abs(dot(path.ray.direction, intersect.hitNormal)), 0, 1) * vec3(1, 1, 1) * 0.1;
+
+	} else {
+		path.remainingBounces = 0;
+	}
 
 	//path.ray.direction = normalize(reflect(path.ray.direction, intersect.hitNormal));
 	//path.ray.origin = intersect.hitPoint + 0.01 * path.ray.direction;

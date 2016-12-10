@@ -54,7 +54,7 @@ void main()
 			L = normalize(L);
 
 			// Attenuation
-			float atten = ubo.lights[i].radius / (pow(dist, 2.0) + 1.0);
+			float atten = ubo.lights[i].radius - dist;//ubo.lights[i].radius / (pow(dist, 2.0) + 1.0);
 
 			// Diffuse part
 			vec3 N = normalize(normal);

@@ -856,7 +856,7 @@ void VulkanHybridRenderer::loadMeshes()
 		vkMeshLoader::MeshCreateInfo meshCreateInfo;
 
 		//loadMesh(getAssetPath() + "models/gltfs/cornell/cornell.dae", 
-		loadMesh(getAssetPath() + "models/box/boxes.dae", &m_sceneMeshes.m_model.meshBuffer, &m_sceneMeshes.m_model.meshAttributes, vertexLayout, &meshCreateInfo);
+		loadMesh(getAssetPath() + "models/box/boxes_transparent.dae", &m_sceneMeshes.m_model.meshBuffer, &m_sceneMeshes.m_model.meshAttributes, vertexLayout, &meshCreateInfo);
 		std::cout << "Number of vertices: " << m_sceneMeshes.m_model.meshAttributes.m_verticePositions.size() << std::endl;
 		std::cout << "Number of triangles: " << m_sceneMeshes.m_model.meshAttributes.m_verticePositions.size() / 3 << std::endl;
 	}
