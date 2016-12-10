@@ -338,7 +338,7 @@ float calcShadow(in Ray feeler, in int objectId, in float t)
 		float tTri = triangleIntersect(tri, feeler, tmp_normal, tmp_hitPoint);
 		if (tTri > EPSILON && tTri < t)
 		{
-			return 0.1;
+			return 0.5;
 		}
 	}
 
@@ -390,9 +390,14 @@ void shadeMaterial(
 
 			// Light feeler test
 			Ray feeler;
-			feeler.origin = intersect.hitPoint + 0.9 * lightVec;
+			feeler.origin = intersect.hitPoint + 0.9 * intersect.hitNormal;
 			feeler.direction = lightVec;
-			float shadow = calcShadow(feeler, intersect.materialId, dist); 
+			
+			// @note: only compute shadows for the ground
+			float shadow = 1;
+			if (intersect.materialId == 2) {
+				shadow = calcShadow(feeler, intersect.materialId, dist); 
+			}
 	
 			// Attenuation
 			float atten = ubo.lights[i].radius - dist;
