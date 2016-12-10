@@ -118,7 +118,7 @@ private:
 
 		// -- Uniforms
 		struct CameraUniform { // Compute shader uniform block object
-			glm::vec4 position = glm::vec4(0.0, 2.5f, 10.0f, 1.0f);
+			glm::vec4 position = glm::vec4(0.0, -2.5f, 10.0f, 1.0f);
 			glm::vec4 right = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);;
 			glm::vec4 lookat = glm::vec4(0.0, 2.5f, 0.0f, 0.0f);
 			glm::vec4 forward;

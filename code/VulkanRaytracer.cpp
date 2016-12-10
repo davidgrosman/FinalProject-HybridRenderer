@@ -600,7 +600,14 @@ void VulkanRaytracer::prepareResources() {
 
 void VulkanRaytracer::loadMeshes()
 {
-	loadMesh(getAssetPath() + "models/gltfs/cornell/cornell.glb", nullptr, &m_sceneAttributes, vertexLayout);
+
+	{
+		vkMeshLoader::MeshCreateInfo meshCreateInfo;
+
+		loadMesh(getAssetPath() + "models/spheres/spheres.dae", nullptr, &m_sceneAttributes, vertexLayout, &meshCreateInfo);
+		std::cout << "Number of vertices: " << m_sceneAttributes.m_verticePositions.size() << std::endl;
+		std::cout << "Number of triangles: " << m_sceneAttributes.m_verticePositions.size() / 3 << std::endl;
+	}
 }
 
 // Prepare a texture target that is used to store compute shader calculations

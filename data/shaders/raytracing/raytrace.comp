@@ -13,7 +13,7 @@
 #define MAXLEN 1000.0
 #define TRACEDEPTH 1
 
-vec3 LIGHT_POS = vec3(2, 4, 5);
+vec3 LIGHT_POS = vec3(0, -5, 1);
 
 struct Camera
 {
@@ -477,7 +477,7 @@ void main()
 	// Initialize camera
 	camera.position = ubo.position;
 	camera.right = ubo.right;
-	camera.up = ubo.up;
+	camera.up = -ubo.up;
 	camera.aspectRatio = dim.x / dim.y;
 	camera.lookat = ubo.lookat;
 	camera.forward = normalize(camera.lookat - camera.position);

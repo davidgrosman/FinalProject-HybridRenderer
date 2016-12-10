@@ -132,7 +132,7 @@ void VulkanHybridRenderer::shutdownVulkan()
 
 	// Meshes
 	VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_model.meshBuffer);
-	VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_floor.meshBuffer);
+	//VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_floor.meshBuffer);
 	VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_quad);
 	//VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_transparentObj.meshBuffer);
 
@@ -147,8 +147,8 @@ void VulkanHybridRenderer::shutdownVulkan()
 
 	m_textureLoader->destroyTexture(m_modelTex.m_colorMap);
 	m_textureLoader->destroyTexture(m_modelTex.m_normalMap);
-	m_textureLoader->destroyTexture(m_floorTex.m_colorMap);
-	m_textureLoader->destroyTexture(m_floorTex.m_normalMap);
+	//m_textureLoader->destroyTexture(m_floorTex.m_colorMap);
+	//m_textureLoader->destroyTexture(m_floorTex.m_normalMap);
 
 	vkDestroySemaphore(m_device, m_offscreenSemaphore, nullptr);
 
@@ -616,11 +616,11 @@ void VulkanHybridRenderer::buildDeferredCommandBuffer()
 
 	VkDeviceSize offsets[1] = { 0 };
 
-	// Background
-	vkCmdBindDescriptorSets(m_offScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_offscreen, 0, 1, &m_descriptorSets.m_model, 0, NULL);
-	vkCmdBindVertexBuffers(m_offScreenCmdBuffer, VERTEX_BUFFER_BIND_ID, 1, &m_sceneMeshes.m_floor.meshBuffer.vertices.buf, offsets);
-	vkCmdBindIndexBuffer(m_offScreenCmdBuffer, m_sceneMeshes.m_floor.meshBuffer.indices.buf, 0, VK_INDEX_TYPE_UINT32);
-	vkCmdDrawIndexed(m_offScreenCmdBuffer, m_sceneMeshes.m_floor.meshBuffer.indexCount, 3, 0, 0, 0);
+	//// Background
+	//vkCmdBindDescriptorSets(m_offScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_offscreen, 0, 1, &m_descriptorSets.m_model, 0, NULL);
+	//vkCmdBindVertexBuffers(m_offScreenCmdBuffer, VERTEX_BUFFER_BIND_ID, 1, &m_sceneMeshes.m_floor.meshBuffer.vertices.buf, offsets);
+	//vkCmdBindIndexBuffer(m_offScreenCmdBuffer, m_sceneMeshes.m_floor.meshBuffer.indices.buf, 0, VK_INDEX_TYPE_UINT32);
+	//vkCmdDrawIndexed(m_offScreenCmdBuffer, m_sceneMeshes.m_floor.meshBuffer.indexCount, 3, 0, 0, 0);
 
 	// Object
 	vkCmdBindDescriptorSets(m_offScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_offscreen, 0, 1, &m_descriptorSets.m_model, 0, NULL);
@@ -669,8 +669,8 @@ void VulkanHybridRenderer::loadTextures()
 	m_textureLoader->loadTexture(getAssetPath() + "textures/pattern_35_bc3.ktx", VK_FORMAT_BC3_UNORM_BLOCK, &m_modelTex.m_colorMap);
 	m_textureLoader->loadTexture(getAssetPath() + "textures/pattern_57_normal_bc3.ktx", VK_FORMAT_BC3_UNORM_BLOCK, &m_modelTex.m_normalMap);
 
-	m_textureLoader->loadTexture(getAssetPath() + "textures/pattern_35_bc3.ktx", VK_FORMAT_BC3_UNORM_BLOCK, &m_floorTex.m_colorMap);
-	m_textureLoader->loadTexture(getAssetPath() + "textures/pattern_35_normalmap_bc3.ktx", VK_FORMAT_BC3_UNORM_BLOCK, &m_floorTex.m_normalMap);
+	//m_textureLoader->loadTexture(getAssetPath() + "textures/pattern_35_bc3.ktx", VK_FORMAT_BC3_UNORM_BLOCK, &m_floorTex.m_colorMap);
+	//m_textureLoader->loadTexture(getAssetPath() + "textures/pattern_35_normalmap_bc3.ktx", VK_FORMAT_BC3_UNORM_BLOCK, &m_floorTex.m_normalMap);
 }
 
 void VulkanHybridRenderer::reBuildCommandBuffers()
@@ -844,19 +844,19 @@ void VulkanHybridRenderer::buildCommandBuffers()
 
 void VulkanHybridRenderer::loadMeshes()
 {
-	{
-		vkMeshLoader::MeshCreateInfo meshCreateInfo;
-		meshCreateInfo.m_scale = glm::vec3(2.0f);
-		meshCreateInfo.m_uvscale = glm::vec2(4.0f);
-		meshCreateInfo.m_pos = glm::vec3(0.0f, 1.5f, 0.0f);
-		loadMesh(getAssetPath() + "models/plane.obj", &m_sceneMeshes.m_floor.meshBuffer, &m_sceneMeshes.m_floor.meshAttributes, vertexLayout, &meshCreateInfo);
-	}
+	//{
+	//	vkMeshLoader::MeshCreateInfo meshCreateInfo;
+	//	meshCreateInfo.m_scale = glm::vec3(2.0f);
+	//	meshCreateInfo.m_uvscale = glm::vec2(4.0f);
+	//	meshCreateInfo.m_pos = glm::vec3(0.0f, 1.5f, 0.0f);
+	//	loadMesh(getAssetPath() + "models/plane.obj", &m_sceneMeshes.m_floor.meshBuffer, &m_sceneMeshes.m_floor.meshAttributes, vertexLayout, &meshCreateInfo);
+	//}
 
 	{
 		vkMeshLoader::MeshCreateInfo meshCreateInfo;
 
 		//loadMesh(getAssetPath() + "models/gltfs/cornell/cornell.dae", 
-		loadMesh(getAssetPath() + "models/knot/knot.dae", &m_sceneMeshes.m_model.meshBuffer, &m_sceneMeshes.m_model.meshAttributes, vertexLayout, &meshCreateInfo);
+		loadMesh(getAssetPath() + "models/spheres/spheres.dae", &m_sceneMeshes.m_model.meshBuffer, &m_sceneMeshes.m_model.meshAttributes, vertexLayout, &meshCreateInfo);
 		std::cout << "Number of vertices: " << m_sceneMeshes.m_model.meshAttributes.m_verticePositions.size() << std::endl;
 		std::cout << "Number of triangles: " << m_sceneMeshes.m_model.meshAttributes.m_verticePositions.size() / 3 << std::endl;
 	}
@@ -1397,30 +1397,30 @@ void VulkanHybridRenderer::setupDescriptors()
 	};
 	vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
 
-	// Floor
-	VK_CHECK_RESULT(vkAllocateDescriptorSets(m_device, &allocInfo, &m_descriptorSets.m_floor));
-	writeDescriptorSets =
-	{
-		// Binding 0: Vertex shader uniform buffer
-		vkUtils::initializers::writeDescriptorSet(
-		m_descriptorSets.m_floor,
-		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-		0,
-		&m_uniformData.m_vsOffscreen.descriptor),
-		// Binding 1: Color map
-		vkUtils::initializers::writeDescriptorSet(
-		m_descriptorSets.m_floor,
-		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		1,
-		&m_floorTex.m_colorMap.descriptor),
-		// Binding 2: Normal map
-		vkUtils::initializers::writeDescriptorSet(
-		m_descriptorSets.m_floor,
-		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		2,
-		&m_floorTex.m_normalMap.descriptor)
-	};
-	vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
+	//// Floor
+	//VK_CHECK_RESULT(vkAllocateDescriptorSets(m_device, &allocInfo, &m_descriptorSets.m_floor));
+	//writeDescriptorSets =
+	//{
+	//	// Binding 0: Vertex shader uniform buffer
+	//	vkUtils::initializers::writeDescriptorSet(
+	//	m_descriptorSets.m_floor,
+	//	VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+	//	0,
+	//	&m_uniformData.m_vsOffscreen.descriptor),
+	//	// Binding 1: Color map
+	//	vkUtils::initializers::writeDescriptorSet(
+	//	m_descriptorSets.m_floor,
+	//	VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+	//	1,
+	//	&m_floorTex.m_colorMap.descriptor),
+	//	// Binding 2: Normal map
+	//	vkUtils::initializers::writeDescriptorSet(
+	//	m_descriptorSets.m_floor,
+	//	VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+	//	2,
+	//	&m_floorTex.m_normalMap.descriptor)
+	//};
+	//vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
 
 	// === On screen
 	allocInfo =
@@ -1639,7 +1639,7 @@ void VulkanHybridRenderer::updateUniformBufferDeferredLights(SRendererContext& c
 	float SPEED = 36.0f;
 
 	// White
-	m_uboFragmentLights.m_lights[0].position = glm::vec4(0.0f, -5.0f, 1.0f, 0.0f);
+	m_uboFragmentLights.m_lights[0].position = glm::vec4(0.0f, -5.0f, 0.0f, 1.0f);
 	m_uboFragmentLights.m_lights[0].color = glm::vec3(1.1f, 1.1f, 0.9f);
 	m_uboFragmentLights.m_lights[0].radius = 10.0f;
 	// Red
