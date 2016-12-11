@@ -8,8 +8,8 @@
 #include <vulkan/vulkan.h>
 
 #include "Utilities.h"
-
 #include "VulkanUtilities.h"
+
 #include "VulkanRenderer.h"
 #include "GfxScene.h"
 
@@ -198,6 +198,7 @@ private:
 	SInputTextures			m_modelTex;
 
 	SSceneMeshes			m_sceneMeshes;
+	BVHTree					m_bvhTree; // Only used for SSceneMeshes::m_model for now.
 
 	SVkVertices				m_vertices;
 
@@ -242,6 +243,7 @@ private:
 			vk::Buffer indicesAndMaterialIDs;
 			vk::Buffer positions;
 			vk::Buffer normals;
+			vk::Buffer bvhAabbNodes;
 
 		} m_buffers;
 

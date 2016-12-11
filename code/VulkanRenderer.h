@@ -163,8 +163,8 @@ public:
 	
 
 	// Load a mesh and create vulkan vertex and index buffers with given vertex layout
-	void loadMesh( std::string filename, vkMeshLoader::MeshBuffer *meshBuffer, SSceneAttributes* meshAttributes, std::vector<vkMeshLoader::VertexLayout> vertexLayout,
-		vkMeshLoader::MeshCreateInfo *meshCreateInfo = NULL);
+	void loadMesh(std::string filename, vkMeshLoader::MeshBuffer *meshBuffer, SSceneAttributes* meshAttributes, std::vector<vkMeshLoader::VertexLayout> vertexLayout,
+		vkMeshLoader::MeshCreateInfo *meshCreateInfo = NULL, BVHTree* tree = NULL);
 
 	std::string m_appName = "Vulkan Renderer";
 

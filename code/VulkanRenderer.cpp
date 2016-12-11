@@ -272,10 +272,12 @@ VkBool32 VulkanRenderer::createBuffer(VkBufferUsageFlags usageFlags, VkDeviceSiz
 	}
 }
 
-void VulkanRenderer::loadMesh(std::string filename, vkMeshLoader::MeshBuffer * meshBuffer, SSceneAttributes* meshAttributes, std::vector<vkMeshLoader::VertexLayout> vertexLayout, vkMeshLoader::MeshCreateInfo *meshCreateInfo)
+void VulkanRenderer::loadMesh(std::string filename, vkMeshLoader::MeshBuffer * meshBuffer, SSceneAttributes* meshAttributes, std::vector<vkMeshLoader::VertexLayout> vertexLayout, vkMeshLoader::MeshCreateInfo *meshCreateInfo, BVHTree* tree)
 {
 	VulkanMeshLoader *mesh = new VulkanMeshLoader();
 	mesh->LoadMesh(filename);
+	if (tree)
+		tree->buildBVHTree( mesh->m_Entries );
 	
 	if (meshAttributes != nullptr) {
 		*meshAttributes = mesh->m_sceneAttributes;

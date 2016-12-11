@@ -601,7 +601,7 @@ float calcShadow(in Ray feeler, in int objectId, in float t)
 			float tTri = triangleIntersect(tri, feeler, tmp_normal, tmp_hitPoint);
 			if (tTri > EPSILON && tTri < t)
 			{
-				return 0.5;
+				return 0.0;
 			}
 		}
 		*/	
@@ -667,19 +667,10 @@ void shadeMaterial(
 				shadow = calcShadow(feeler, intersect.materialId, dist); 
 			}
 	
-			// Attenuation
-			float atten = ubo.lights[i].radius - dist;//ubo.lights[i].radius / (pow(dist, 2.0) + 1.0);
-		
-			// Diffuse195
-			float diffuse = lightDiffuse(intersect.hitNormal, lightVec);
-			vec3 diffuseColor = diffuse * vec3(material.diffuse);
-		
-			// Specular
-			float specular = lightSpecular(vec3(ubo.cameraPosition), intersect.hitNormal, lightVec, 1.0);
-			vec3 specularColor = specular * ubo.lights[i].color; 
-		
-			path.color = diffuseColor * ubo.lights[i].color;
-			path.color *= shadow * atten;
+			if (shadow == 0.5)
+                path.color = vec3(0,0,1);
+			else
+                path.color = vec3(0,1,0);
 		}
 	
 

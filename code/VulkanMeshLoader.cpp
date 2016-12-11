@@ -25,6 +25,219 @@ This code is licensed under the MIT license (MIT) (http://opensource.org/license
 
 typedef unsigned char Byte;
 
+/////////////////////////////////////////////////////////////////////////////////
+/////							BVHTree										/////
+int BVHTree::numHeaderAabbNodes = 0;
+
+void BVHTree::BVHNode::setAabb(const Triangle* tri, size_t numTris)
+{
+	if (numTris == 0)
+		return;
+
+	glm::vec3 minVtx = tri[0].m_pos[0];
+	glm::vec3 maxVtx = tri[0].m_pos[0];
+	for (int triIdx = 0; triIdx < numTris; triIdx++)
+	{
+		minVtx = glm::min(tri[triIdx].m_pos[0], minVtx);
+		minVtx = glm::min(tri[triIdx].m_pos[1], minVtx);
+		minVtx = glm::min(tri[triIdx].m_pos[2], minVtx);
+
+		maxVtx = glm::max(tri[triIdx].m_pos[0], maxVtx);
+		maxVtx = glm::max(tri[triIdx].m_pos[1], maxVtx);
+		maxVtx = glm::max(tri[triIdx].m_pos[2], maxVtx);
+	}
+
+	m_minAABB = glm::vec4(minVtx, 0.0f);
+	m_maxAABB = glm::vec4(maxVtx, 0.0f);
+}
+
+void BVHTree::BVHNode::setRootNode(size_t aabbIdx)
+{
+	m_minAABB.w = aabbIdx;
+	m_maxAABB.w = 0;
+}
+
+void BVHTree::BVHNode::setLeftChild(size_t aabbIdx)
+{
+	m_minAABB.w = aabbIdx;
+}
+
+void BVHTree::BVHNode::setRightChild(size_t aabbIdx)
+{
+	m_maxAABB.w = aabbIdx;
+}
+
+void BVHTree::BVHNode::setNumLeafChildren(size_t numChildren)
+{
+	m_minAABB.w = numChildren;
+	m_maxAABB.w = numChildren;
+}
+
+void BVHTree::BVHNode::setAsLeafTri(const glm::ivec3& triIndices)
+{
+	m_minAABB.x = triIndices[0];
+	m_minAABB.y = triIndices[1];
+	m_minAABB.z = triIndices[2];
+	m_minAABB.w = 0;
+}
+
+BVHTree::BVHNode::BVHNode(const glm::vec4& bound0, const glm::vec4& bound1)
+{
+	m_minAABB = glm::min(bound0, bound1);
+	m_maxAABB = glm::max(bound0, bound1);
+}
+
+size_t BVHTree::_buildBVHTree(int depth, int maxLeafSize, const std::vector<Triangle>& tris, std::vector<BVHTree::BVHNode>& outNodes)
+{
+	if (tris.empty())
+		return 0;
+
+	int newBvhNodeIdx = outNodes.size();
+
+	outNodes.push_back(BVHNode());
+	BVHNode& newBvhNode = outNodes.back();
+	newBvhNode.setAabb(tris.data(), tris.size());
+
+	if (depth == 0 || tris.size() <= maxLeafSize)
+	{
+		newBvhNode.setNumLeafChildren(tris.size());
+		for (int i = 0; i < tris.size(); i++)
+		{
+			outNodes.push_back(BVHNode());
+			BVHNode& bvhLeafNode = outNodes.back();
+			bvhLeafNode.setAsLeafTri(tris[i].m_indices);
+		}
+		return newBvhNodeIdx;
+	}
+
+	// 1) Find dimension of largest extent
+	glm::vec3 trisMin = tris[0].m_pos[0];
+	glm::vec3 trisMax = tris[0].m_pos[0];
+
+	for (int triIdx = 0; triIdx < tris.size(); triIdx++)
+	{
+		for (int posIdx = 0; posIdx < 3; posIdx++)
+		{
+			trisMin = glm::min(trisMin, tris[triIdx].m_pos[posIdx]);
+			trisMax = glm::max(trisMax, tris[triIdx].m_pos[posIdx]);
+		}
+	}
+
+	glm::vec3 trisExtent = trisMax - trisMin;
+	trisExtent = glm::abs(trisExtent);
+
+	DIM largestDim = DIM::DIM_X;
+	if (trisExtent[DIM::DIM_Y] > trisExtent[largestDim]) { largestDim = DIM_Y; }
+	if (trisExtent[DIM::DIM_Z] > trisExtent[largestDim]) { largestDim = DIM_Z; }
+
+	std::vector<TriDimExtent> dimExtents; dimExtents.resize(tris.size());
+	for (int triIdx = 0; triIdx < tris.size(); triIdx++)
+	{
+		dimExtents[triIdx].set(largestDim, triIdx, tris[triIdx]);
+	}
+	std::sort(dimExtents.begin(), dimExtents.end(), TriDimExtent::SortTris);
+
+	size_t numTris = tris.size();
+	size_t triIdx = 0;
+
+	std::vector<Triangle> sortedTrisA; sortedTrisA.resize(numTris / 2);
+	for (; triIdx < numTris / 2; triIdx++)
+	{
+		sortedTrisA[triIdx] = tris[dimExtents[triIdx].m_triIdx];
+	}
+	std::vector<Triangle> sortedTrisB; sortedTrisB.reserve(numTris - numTris / 2);
+	for (; triIdx < numTris; triIdx++)
+	{
+		sortedTrisB.push_back(tris[dimExtents[triIdx].m_triIdx]);
+	}
+
+	int bvhNodeIdxL = _buildBVHTree(depth - 1, maxLeafSize, sortedTrisA, outNodes);
+	outNodes[newBvhNodeIdx].setLeftChild(numHeaderAabbNodes + bvhNodeIdxL);
+
+	int bvhNodeIdxR = _buildBVHTree(depth - 1, maxLeafSize, sortedTrisB, outNodes);
+	outNodes[newBvhNodeIdx].setRightChild(numHeaderAabbNodes + bvhNodeIdxR);
+
+	return newBvhNodeIdx;
+}
+
+void BVHTree::buildBVHTree(const std::vector<vkMeshLoader::MeshEntry>& meshEntries)
+{
+	const size_t numMeshes = meshEntries.size();
+	m_aabbNodes.resize(numMeshes + 1);
+	m_aabbNodes[0].setNumLeafChildren(numMeshes);
+
+	std::vector< std::vector<Triangle> > sceneTris;
+	sceneTris.resize(numMeshes);
+	for (int meshIdx = 0; meshIdx < numMeshes; meshIdx++)
+	{
+		const vkMeshLoader::MeshEntry& meshEntry = meshEntries[meshIdx];
+		const int indicesCount = meshEntry.Indices.size();
+		sceneTris[meshIdx].resize(indicesCount / 3);
+
+		for (int iCount = 0, iTriIdx = 0; iCount < indicesCount; iCount += 3, iTriIdx++)
+		{
+			glm::ivec3 triIdx(
+				meshEntry.Indices[iCount]		+ meshEntry.vertexBase,
+				meshEntry.Indices[iCount + 1]	+ meshEntry.vertexBase,
+				meshEntry.Indices[iCount + 2]	+ meshEntry.vertexBase);
+
+			sceneTris[meshIdx][iTriIdx].set(
+				meshEntry.Vertices[triIdx[0] - meshEntry.vertexBase].m_pos,
+				meshEntry.Vertices[triIdx[1] - meshEntry.vertexBase].m_pos,
+				meshEntry.Vertices[triIdx[2] - meshEntry.vertexBase].m_pos);
+
+			sceneTris[meshIdx][iTriIdx].m_indices = triIdx;
+		}
+
+		int treeMaxDepth = 5;
+		int maxLeafSize = 12;
+
+		numHeaderAabbNodes = m_aabbNodes.size();
+		std::vector<BVHTree::BVHNode> newNodes;
+		_buildBVHTree(treeMaxDepth, maxLeafSize, sceneTris[meshIdx], newNodes);
+		
+		m_aabbNodes[meshIdx + 1].setRootNode( m_aabbNodes.size() );
+		m_aabbNodes.insert( m_aabbNodes.end(), newNodes.begin(), newNodes.end() );
+	}
+
+	{
+		const int numMeshes = m_aabbNodes[0].m_minAABB.w;
+		int numTris = 0;
+		for (int iMeshIdx = 0; iMeshIdx < numMeshes; iMeshIdx++)
+		{
+			int iRootNode = m_aabbNodes[iMeshIdx + 1].m_minAABB.w;
+			numTris = visit(iRootNode, m_aabbNodes);
+		}
+	}
+}
+
+int BVHTree::visit(int iCurNode, std::vector<BVHTree::BVHNode>& nodes)
+{
+	int numTris = 0;
+
+	BVHTree::BVHNode& node = nodes[iCurNode];
+	if (node.m_minAABB.w == node.m_maxAABB.w)
+	{
+		int numNodes = node.m_minAABB.w;
+		for (int i = 0; i < numNodes; i++)
+		{
+			numTris++;
+			BVHTree::BVHNode& leafNode = nodes[iCurNode + 1 + i];
+
+		}
+	}
+	else
+	{
+		numTris += visit(node.m_minAABB.w, nodes);
+		numTris += visit(node.m_maxAABB.w, nodes);
+	}
+
+	return numTris;
+}
+
+/////////////////////////////////////////////////////////////////////////////////
+/////				VulkanMeshLoader										/////
+
 VulkanMeshLoader::VulkanMeshLoader()
 {
 }
@@ -131,7 +344,7 @@ bool VulkanMeshLoader::LoadMesh(const std::string& filename, int flags)
 * @param paiMesh ASSIMP mesh to get the data from
 * @param pScene Scene file of the ASSIMP mesh
 */
-void VulkanMeshLoader::InitMesh(MeshEntry *meshEntry, const aiMesh* paiMesh, const aiScene* pScene)
+void VulkanMeshLoader::InitMesh(vkMeshLoader::MeshEntry* meshEntry, const aiMesh* paiMesh, const aiScene* pScene)
 {
 	meshEntry->MaterialIndex = paiMesh->mMaterialIndex;
 
@@ -148,7 +361,7 @@ void VulkanMeshLoader::InitMesh(MeshEntry *meshEntry, const aiMesh* paiMesh, con
 		aiVector3D* pTangent = (paiMesh->HasTangentsAndBitangents()) ? &(paiMesh->mTangents[i]) : &Zero3D;
 		aiVector3D* pBiTangent = (paiMesh->HasTangentsAndBitangents()) ? &(paiMesh->mBitangents[i]) : &Zero3D;
 
-		Vertex v(
+		vkMeshLoader::Vertex v(
 			glm::vec3(pPos->x, -pPos->y, pPos->z),
 			glm::vec2(pTexCoord->x, pTexCoord->y),
 			glm::vec3(pNormal->x, pNormal->y, pNormal->z),

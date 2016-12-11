@@ -856,7 +856,7 @@ void VulkanHybridRenderer::loadMeshes()
 		vkMeshLoader::MeshCreateInfo meshCreateInfo;
 
 		//loadMesh(getAssetPath() + "models/gltfs/cornell/cornell.dae", 
-		loadMesh(getAssetPath() + "models/box/boxes.dae", &m_sceneMeshes.m_model.meshBuffer, &m_sceneMeshes.m_model.meshAttributes, vertexLayout, &meshCreateInfo);
+		loadMesh(getAssetPath() + "models/box/boxes.dae", &m_sceneMeshes.m_model.meshBuffer, &m_sceneMeshes.m_model.meshAttributes, vertexLayout, &meshCreateInfo, &m_bvhTree);
 		std::cout << "Number of vertices: " << m_sceneMeshes.m_model.meshAttributes.m_verticePositions.size() << std::endl;
 		std::cout << "Number of triangles: " << m_sceneMeshes.m_model.meshAttributes.m_verticePositions.size() / 3 << std::endl;
 	}
@@ -1052,6 +1052,38 @@ void VulkanHybridRenderer::loadMeshes()
 
 	vkDestroyBuffer(m_device, stagingBuffer.buffer, nullptr);
 	vkFreeMemory(m_device, stagingBuffer.memory, nullptr);
+
+
+	// --  BVH AABBs
+	bufferSize = m_bvhTree.m_aabbNodes.size() * sizeof(BVHTree::BVHNode);
+
+	createBuffer(
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		bufferSize,
+		m_bvhTree.m_aabbNodes.data(),
+		&stagingBuffer.buffer,
+		&stagingBuffer.memory,
+		&stagingBuffer.descriptor);
+
+	createBuffer(
+		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		bufferSize,
+		nullptr,
+		&m_compute.m_buffers.bvhAabbNodes.buffer,
+		&m_compute.m_buffers.bvhAabbNodes.memory,
+		&m_compute.m_buffers.bvhAabbNodes.descriptor);
+
+	// Copy to staging buffer
+	VkCommandBuffer copyAabbNodesCmd = createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+	copyRegion = {};
+	copyRegion.size = bufferSize;
+	vkCmdCopyBuffer(copyAabbNodesCmd, stagingBuffer.buffer, m_compute.m_buffers.bvhAabbNodes.buffer, 1, &copyRegion);
+	flushCommandBuffer(copyAabbNodesCmd, m_compute.queue, true);
+
+	vkDestroyBuffer(m_device, stagingBuffer.buffer, nullptr);
+	vkFreeMemory(m_device, stagingBuffer.memory, nullptr);
 }
 
 void VulkanHybridRenderer::generateQuads()
@@ -1120,7 +1152,7 @@ void VulkanHybridRenderer::setupDescriptorFramework()
 		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10),
 		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 15), // Model + floor + out texture
 		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1),
-		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3),
+		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10),
 	};
 
 	VkDescriptorPoolCreateInfo descriptorPoolInfo =
@@ -1283,6 +1315,11 @@ void VulkanHybridRenderer::setupDescriptorFramework()
 		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 		VK_SHADER_STAGE_COMPUTE_BIT,
 		8),
+		// Binding 9 : bvhAabbNodes buffer
+		vkUtils::initializers::descriptorSetLayoutBinding(
+		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		VK_SHADER_STAGE_COMPUTE_BIT,
+		9),
 	};
 
 	descriptorLayout =
@@ -1514,6 +1551,13 @@ void VulkanHybridRenderer::setupDescriptors()
 		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 		8,
 		&m_compute.m_buffers.materials.descriptor
+		),
+		// Binding 9 : bvhAabbNodes buffer
+		vkUtils::initializers::writeDescriptorSet(
+		m_descriptorSets.m_raytrace,
+		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		9,
+		&m_compute.m_buffers.bvhAabbNodes.descriptor
 		)
 	};
 
