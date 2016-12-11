@@ -302,9 +302,10 @@ void VulkanRenderer::loadMesh(std::string filename, vkMeshLoader::MeshBuffer * m
 	delete(mesh);
 }
 
-VulkanRenderer::VulkanRenderer()
+VulkanRenderer::VulkanRenderer(const std::string& fileName)
 : m_wasInitialized(false)
 , m_debugDisplay(false)
+, m_fileName(fileName)
 {
 }
 

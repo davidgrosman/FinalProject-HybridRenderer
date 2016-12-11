@@ -43,7 +43,7 @@ class VulkanDeferredRenderer : public VulkanRenderer
 {
 public:
 
-	VulkanDeferredRenderer();
+	VulkanDeferredRenderer(const std::string& fileName);
 	~VulkanDeferredRenderer();
 
 	virtual void draw(SRendererContext& context);

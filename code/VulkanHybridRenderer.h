@@ -27,7 +27,7 @@ class VulkanHybridRenderer : public VulkanRenderer
 {
 public:
 
-	VulkanHybridRenderer();
+	VulkanHybridRenderer(const std::string& fileName);
 	~VulkanHybridRenderer();
 
 	virtual void draw(SRendererContext& context);

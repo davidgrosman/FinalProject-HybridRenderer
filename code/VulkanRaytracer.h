@@ -19,7 +19,7 @@
 class VulkanRaytracer : public VulkanRenderer {
 
 public:
-	VulkanRaytracer();
+	VulkanRaytracer(const std::string& fileName);
 	~VulkanRaytracer();
 
 	virtual void draw(SRendererContext& context) override;
@@ -78,12 +78,11 @@ private:
 private:
 
 	void prepareResources();
-	void generateQuad();
 	void loadMeshes();
 	void prepareTextureTarget(vkUtils::VulkanTexture *tex, uint32_t width, uint32_t height, VkFormat format);
 
 	void buildRaytracingCommandBuffer();
-
+	void updateUniformBuffer(SRendererContext& context);
 private:
 	SSceneAttributes		m_sceneAttributes;
 
@@ -103,7 +102,7 @@ private:
 
 		struct {
 			// -- Uniform buffer
-			vkUtils::UniformData camera;
+			vkUtils::UniformData ubo;
 			vkUtils::UniformData materials;
 
 			// -- Shapes buffers
@@ -117,16 +116,20 @@ private:
 		vkUtils::VulkanTexture storageRaytraceImage;
 
 		// -- Uniforms
-		struct CameraUniform { // Compute shader uniform block object
-			glm::vec4 position = glm::vec4(0.0, -2.5f, 5.0f, 1.0f);
+		struct Uniform { // Compute shader uniform block object
+			glm::vec4 position = glm::vec4(0.0, 2.5f, -10.0f, 1.0f);
 			glm::vec4 right = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);;
-			glm::vec4 lookat = glm::vec4(0.0, 0.f, 0.0f, 0.0f);
+			glm::vec4 lookat = glm::vec4(0.0, 5.0f, 0.0f, 0.0f);
 			glm::vec4 forward;
 			glm::vec4 up = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
 			glm::vec2 pixelLength;
 			float fov = 60.0f;
 			float aspectRatio = 45.0f;
-		} cameraUnif;
+			SSceneLight m_lights[6];
+			uint32_t	m_lightCount;
+			uint32_t    m_materialCount;
+			glm::ivec2  _pad;
+		} ubo;
 
 		VkSemaphore semaphore;
 
