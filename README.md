@@ -16,6 +16,10 @@ Please see [FinalProjectPitch.md](/docs/FinalProjectPitch.md) for full descripti
 
 Majority of the code base was started from [Vulkan Samples](https://github.com/SaschaWillems/Vulkan) by Sascha Willems and [Vulkan Tutorial](https://vulkan-tutorial.com/) by Alexander Overvoorde. [Github](https://github.com/Overv/VulkanTutorial)
 
+
+# Progress update Nov 28, 2016
+
+
 # Progress update Nov 28, 2016
 
 ### Milestone 1
@@ -88,7 +92,7 @@ _Notice the shadow from the light source onto the ground caused by using light f
  - [obj2gltf](https://github.com/AnalyticalGraphicsInc/OBJ2GLTF) by [AnalyticalGraphicsInc](https://github.com/AnalyticalGraphicsInc)
  - [spdlog](https://github.com/gabime/spdlog) by [gabime](https://github.com/gabime/) (see LICENSE for details on LICENSE)
 
-### References
+# References
 
   - [Vulkan Tutorial](https://vulkan-tutorial.com/) by Alexander Overvoorde. [Github](https://github.com/Overv/VulkanTutorial). 
   - WSI Tutorial by Chris Hebert
@@ -103,8 +107,17 @@ _Notice the shadow from the light source onto the ground caused by using light f
   * [Rise of the Tomb Raider async compute update boosts performance on AMD hardware](https://www.extremetech.com/gaming/231481-rise-of-the-tomb-raider-async-compute-update-improves-performance-on-amd-hardware-flat-on-maxwell)
   * [Imagination PowerVR 6XT GR6500 mobile GPU - Ray Tracing demos vs Nvidia Geforce GTX 980 Ti](https://youtu.be/ND96G9UZxxA)
 
- ### Models
+# Models
 
+### Special thanks to my friends at the University of Pennsylvania
+* [octocat]() by [Sally Kong](https://sketchfab.com/models/cad2ffa5d8a24423ab246ee0916a7f3e). Model is converted using [obj2gltf](https://github.com/AnalyticalGraphicsInc/OBJ2GLTF).
+* [bear]() by [Charles Li Wang](http://charlesliwang.com/index.html)
+* [wolf]() by [Rachel Hwang](https://www.linkedin.com/in/rachel-hwang-84a3b989). Model is converted using [obj2gltf](https://github.com/AnalyticalGraphicsInc/OBJ2GLTF).
+
+
+### Others
+
+* [glTF Sample Models](https://github.com/KhronosGroup/glTF/blob/master/sampleModels/README.md)
 * [dragon](). Model is converted using the [Online 3D Converter](http://www.greentoken.de/onlineconv/?step=3&outfmt=collada) from [clara.io](https://clara.io/view/4fe511a4-8c52-49cf-b348-4664c547d9d). Source: Stanford University Computer Graphics Laboratory
 Scanner: Cyberware 3030 MS + spacetime analysis
 Number of scans: ~70
@@ -112,11 +125,6 @@ Total size of scans: 2,748,318 points (about 5,500,000 triangles)
 Reconstruction: vrip (conservatively decimated)
 Size of reconstruction: 566,098 vertices, 1,132,830 triangles
 Comments: contains numerous small holes.
-* [glTF Sample Models](https://github.com/KhronosGroup/glTF/blob/master/sampleModels/README.md)
-* [octocat]() by [Sally Kong](https://sketchfab.com/models/cad2ffa5d8a24423ab246ee0916a7f3e). Model is converted using [obj2gltf](https://github.com/AnalyticalGraphicsInc/OBJ2GLTF).
-* [wolf]() by [Rachel Hwang](https://www.linkedin.com/in/rachel-hwang-84a3b989). Model is converted using [obj2gltf](https://github.com/AnalyticalGraphicsInc/OBJ2GLTF).
-* [centaur model](http://tf3dm.com/3d-model/free-base-mesh-centaur--67384.html) by [BAQStudio](http://tf3dm.com/user/baqstudio), Model is converted using [obj2gltf](https://github.com/AnalyticalGraphicsInc/OBJ2GLTF).
-* Infinite, [3D Head Scan]() by Lee Perry-Smith is licensed under a Creative Commons Attribution 3.0 Unported License. Based on a work at www.triplegangers.com. This distribution was created by Morgan McGuire and Guedis Cardenas http://graphics.cs.williams.edu/data/. See [LICENSE](/gltfs/head/Infinite-Scan_License.txt). Model is converted using [obj2gltf](https://github.com/AnalyticalGraphicsInc/OBJ2GLTF).
 * [Crytek Sponza](http://graphics.cs.williams.edu/data/meshes.xml#2) modified by Morgan McGuire. The model is converted from .obj format to .dae using Maya for loading in the scene.
 * [Small Sponza](https://github.com/domme/VoxelConeTracing/tree/master/bin/assets/meshes) at [VoxelConeTracing](https://github.com/domme/VoxelConeTracing)
 
