@@ -41,6 +41,8 @@ void VulkanRaytracer::draw(SRendererContext& context)
 	computeSubmitInfo.pCommandBuffers = &m_compute.commandBuffer;
 
 	VK_CHECK_RESULT(vkQueueSubmit(m_compute.queue, 1, &computeSubmitInfo, m_compute.fence));
+
+	updateUniformBuffer(context);
 }
 
 void VulkanRaytracer::shutdownVulkan()
@@ -66,8 +68,12 @@ void VulkanRaytracer::shutdownVulkan()
 	vkDestroyBuffer(m_device, m_compute.buffers.normals.buffer, nullptr);
 
 	// Uniform buffers
-	vkUtils::destroyUniformData(m_device, &m_compute.buffers.camera);
+	vkUtils::destroyUniformData(m_device, &m_compute.buffers.ubo);
 	vkUtils::destroyUniformData(m_device, &m_compute.buffers.materials);
+
+	vkFreeMemory(m_device, m_compute.buffers.indices.memory, nullptr);
+	vkFreeMemory(m_device, m_compute.buffers.positions.memory, nullptr);
+	vkFreeMemory(m_device, m_compute.buffers.normals.memory, nullptr);
 
 	vkDestroyFence(m_device, m_compute.fence, nullptr);
 	vkFreeCommandBuffers(m_device, m_cmdPool, 1, &m_compute.commandBuffer);
@@ -83,28 +89,16 @@ void VulkanRaytracer::setupUniformBuffers(SRendererContext& context) {
 
 	prepareResources();
 
-	// Initialize camera's ubo
-	//calculate fov based on resolution
-	float aspectRatio = m_windowWidth / m_windowHeight;
-	float yscaled = tan(m_compute.cameraUnif.fov * (glm::pi<float>() / 180.0f));
-	float xscaled = (yscaled * aspectRatio);
-
-	m_compute.cameraUnif.forward = glm::normalize(m_compute.cameraUnif.lookat - m_compute.cameraUnif.position);
-	m_compute.cameraUnif.pixelLength = glm::vec2(2 * xscaled / (float)m_windowWidth
-		, 2 * yscaled / (float)m_windowHeight);
-
-	m_compute.cameraUnif.aspectRatio = (float)aspectRatio;
-
-	// ====== CAMERA
-	VkDeviceSize bufferSize = sizeof(m_compute.cameraUnif);
+	// ====== CAMERA & LIGHTS
+	VkDeviceSize bufferSize = sizeof(m_compute.ubo);
 	createBuffer(
 		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 		bufferSize,
-		&m_compute.cameraUnif,
-		&m_compute.buffers.camera.buffer,
-		&m_compute.buffers.camera.memory,
-		&m_compute.buffers.camera.descriptor);
+		&m_compute.ubo,
+		&m_compute.buffers.ubo.buffer,
+		&m_compute.buffers.ubo.memory,
+		&m_compute.buffers.ubo.descriptor);
 
 	// ====== MATERIALS
 	bufferSize = sizeof(SMaterial) * m_sceneAttributes.m_materials.size();
@@ -116,6 +110,8 @@ void VulkanRaytracer::setupUniformBuffers(SRendererContext& context) {
 		&m_compute.buffers.materials.buffer,
 		&m_compute.buffers.materials.memory,
 		&m_compute.buffers.materials.descriptor);
+
+	updateUniformBuffer(context);
 }
 
 void VulkanRaytracer::setupDescriptorFramework()
@@ -265,7 +261,7 @@ void VulkanRaytracer::setupDescriptors()
 		m_descriptorSets.m_compute,
 		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 		1,
-		&m_compute.buffers.camera.descriptor
+		&m_compute.buffers.ubo.descriptor
 		),
 		// Binding 2 : Index buffer
 		vkUtils::initializers::writeDescriptorSet(
@@ -490,7 +486,6 @@ void VulkanRaytracer::prepareResources() {
 
 	// --  Index buffer
 	VkDeviceSize bufferSize = m_sceneAttributes.m_indices.size() * sizeof(glm::ivec4);
-	bufferSize = 1000 * sizeof(glm::ivec4);
 
 	createBuffer(
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -717,4 +712,73 @@ void VulkanRaytracer::buildRaytracingCommandBuffer() {
 	vkCmdDispatch(m_compute.commandBuffer, m_compute.storageRaytraceImage.width / 16, m_compute.storageRaytraceImage.height / 16, 1);
 
 	VK_CHECK_RESULT(vkEndCommandBuffer(m_compute.commandBuffer));
+}
+
+void VulkanRaytracer::updateUniformBuffer(SRendererContext& context) {
+	
+	// === CAMERAS
+	// Initialize camera's ubo
+	//calculate fov based on resolution
+	float aspectRatio = m_windowWidth / m_windowHeight;
+	float yscaled = tan(m_compute.ubo.fov * (glm::pi<float>() / 180.0f));
+	float xscaled = (yscaled * aspectRatio);
+
+	m_compute.ubo.forward = glm::normalize(m_compute.ubo.lookat - m_compute.ubo.position);
+	m_compute.ubo.pixelLength = glm::vec2(2 * xscaled / (float)m_windowWidth
+		, 2 * yscaled / (float)m_windowHeight);
+
+	m_compute.ubo.aspectRatio = (float)aspectRatio;
+	m_compute.ubo.position = glm::vec4(context.m_camera.m_position, 1.0);
+
+	static float timer = 0.0f;
+	timer += 0.005f;
+	float SPEED = 360.0f;
+
+	// === LIGHTS
+	// White
+	m_compute.ubo.m_lights[0].position = glm::vec4(0.0f, -2.0f, 0.0f, 1.0f);
+	m_compute.ubo.m_lights[0].color = glm::vec3(0.8f, 0.8f, 0.7f);
+	m_compute.ubo.m_lights[0].radius = 15.0f;
+	// Red
+	m_compute.ubo.m_lights[1].position = glm::vec4(-2.0f, -5.0f, 0.0f, 0.0f);
+	m_compute.ubo.m_lights[1].color = glm::vec3(1.0f, 0.0f, 0.0f);
+	m_compute.ubo.m_lights[1].radius = 15.0f;
+	// Blue
+	m_compute.ubo.m_lights[2].position = glm::vec4(2.0f, 0.0f, 0.0f, 0.0f);
+	m_compute.ubo.m_lights[2].color = glm::vec3(0.0f, 0.0f, 2.5f);
+	m_compute.ubo.m_lights[2].radius = 5.0f;
+	//// Yellow
+	m_compute.ubo.m_lights[3].position = glm::vec4(0.0f, 0.9f, 0.5f, 0.0f);
+	m_compute.ubo.m_lights[3].color = glm::vec3(1.0f, 1.0f, 0.0f);
+	m_compute.ubo.m_lights[3].radius = 2.0f;
+	// Green
+	m_compute.ubo.m_lights[4].position = glm::vec4(0.0f, 0.5f, 0.0f, 0.0f);
+	m_compute.ubo.m_lights[4].color = glm::vec3(0.0f, 1.0f, 0.2f);
+	m_compute.ubo.m_lights[4].radius = 5.0f;
+	// Yellow
+	m_compute.ubo.m_lights[5].position = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
+	m_compute.ubo.m_lights[5].color = glm::vec3(1.0f, 0.7f, 0.3f);
+	m_compute.ubo.m_lights[5].radius = 25.0f;
+
+	m_compute.ubo.m_lights[0].position.x = sin(glm::radians(SPEED * timer)) * 5.0f;
+	m_compute.ubo.m_lights[0].position.z = cos(glm::radians(SPEED * timer)) * 5.0f;
+
+	m_compute.ubo.m_lights[1].position.x = -4.0f + sin(glm::radians(SPEED * timer) + 45.0f) * 2.0f;
+	m_compute.ubo.m_lights[1].position.z = 0.0f + cos(glm::radians(SPEED * timer) + 45.0f) * 2.0f;
+
+	m_compute.ubo.m_lights[2].position.x = 4.0f + sin(glm::radians(SPEED * timer)) * 2.0f;
+	m_compute.ubo.m_lights[2].position.z = 0.0f + cos(glm::radians(SPEED * timer)) * 2.0f;
+
+	m_compute.ubo.m_lights[4].position.x = 0.0f + sin(glm::radians(SPEED * timer + 90.0f)) * 5.0f;
+	m_compute.ubo.m_lights[4].position.z = 0.0f - cos(glm::radians(SPEED * timer + 45.0f)) * 5.0f;
+
+	m_compute.ubo.m_lights[5].position.x = 0.0f + sin(glm::radians(-SPEED * timer + 135.0f)) * 10.0f;
+	m_compute.ubo.m_lights[5].position.z = 0.0f - cos(glm::radians(-SPEED * timer - 45.0f)) * 10.0f;
+
+	m_compute.ubo.m_lightCount = 1;
+
+	uint8_t *pData;
+	VK_CHECK_RESULT(vkMapMemory(m_device, m_compute.buffers.ubo.memory, 0, sizeof(m_compute.ubo), 0, (void **)&pData));
+	memcpy(pData, &m_compute.ubo, sizeof(m_compute.ubo));
+	vkUnmapMemory(m_device, m_compute.buffers.ubo.memory);
 }
