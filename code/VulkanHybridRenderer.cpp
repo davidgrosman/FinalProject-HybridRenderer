@@ -1,3 +1,5 @@
+// Adapted from Sascha Willems Vulkan examples : https ://github.com/SaschaWillems/Vulkan
+
 #include "VulkanHybridRenderer.h"
 
 namespace
@@ -140,6 +142,25 @@ void VulkanHybridRenderer::shutdownVulkan()
 	vkUtils::destroyUniformData(m_device, &m_uniformData.m_vsOffscreen);
 	vkUtils::destroyUniformData(m_device, &m_uniformData.m_vsFullScreen);
 	vkUtils::destroyUniformData(m_device, &m_uniformData.m_fsLights);
+	vkUtils::destroyUniformData(m_device, &m_compute.m_buffers.materials);
+	vkUtils::destroyUniformData(m_device, &m_compute.m_buffers.ubo);
+
+	
+	vkDestroyBuffer(m_device, m_compute.m_buffers.indicesAndMaterialIDs.buffer, nullptr);
+	vkDestroyBuffer(m_device, m_compute.m_buffers.positions.buffer, nullptr);
+	vkDestroyBuffer(m_device, m_compute.m_buffers.normals.buffer, nullptr);
+	vkDestroyBuffer(m_device, m_compute.m_buffers.bvhAabbNodes.buffer, nullptr);
+
+	vkFreeMemory(m_device, m_compute.m_buffers.indicesAndMaterialIDs.memory, nullptr);
+	vkFreeMemory(m_device, m_compute.m_buffers.positions.memory, nullptr);
+	vkFreeMemory(m_device, m_compute.m_buffers.normals.memory, nullptr);
+	vkFreeMemory(m_device, m_compute.m_buffers.bvhAabbNodes.memory, nullptr);
+	vkFreeMemory(m_device, m_compute.m_storageRaytraceImage.deviceMemory, nullptr);
+
+	vkDestroyImage(m_device, m_compute.m_storageRaytraceImage.image, nullptr);
+	vkDestroyImageView(m_device, m_compute.m_storageRaytraceImage.view, nullptr);
+	vkDestroySampler(m_device, m_compute.m_storageRaytraceImage.sampler, nullptr);
+	vkDestroyFence(m_device, m_compute.fence, nullptr);
 
 	vkFreeCommandBuffers(m_device, m_cmdPool, 1, &m_offScreenCmdBuffer);
 
@@ -647,7 +668,6 @@ void VulkanHybridRenderer::buildRaytracingCommandBuffer() {
 
 	// Create a semaphore used to synchronize offscreen rendering and usage
 	VkSemaphoreCreateInfo semaphoreCreateInfo = vkUtils::initializers::semaphoreCreateInfo();
-	VK_CHECK_RESULT(vkCreateSemaphore(m_device, &semaphoreCreateInfo, nullptr, &m_compute.semaphore));
 
 	VkCommandBufferBeginInfo cmdBufInfo = vkUtils::initializers::commandBufferBeginInfo();
 
@@ -857,6 +877,7 @@ void VulkanHybridRenderer::loadMeshes()
 
 		//loadMesh(getAssetPath() + "models/gltfs/cornell/cornell.dae", 
 		loadMesh(getAssetPath() + "models/box/boxes.dae", &m_sceneMeshes.m_model.meshBuffer, &m_sceneMeshes.m_model.meshAttributes, vertexLayout, &meshCreateInfo, &m_bvhTree);
+		//loadMesh(getAssetPath() + "models/box/boxes_transparent.dae", &m_sceneMeshes.m_model.meshBuffer, &m_sceneMeshes.m_model.meshAttributes, vertexLayout, &meshCreateInfo);
 		std::cout << "Number of vertices: " << m_sceneMeshes.m_model.meshAttributes.m_verticePositions.size() << std::endl;
 		std::cout << "Number of triangles: " << m_sceneMeshes.m_model.meshAttributes.m_verticePositions.size() / 3 << std::endl;
 	}
