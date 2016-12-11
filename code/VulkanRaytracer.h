@@ -19,7 +19,7 @@
 class VulkanRaytracer : public VulkanRenderer {
 
 public:
-	VulkanRaytracer();
+	VulkanRaytracer(const std::string& fileName);
 	~VulkanRaytracer();
 
 	virtual void draw(SRendererContext& context) override;

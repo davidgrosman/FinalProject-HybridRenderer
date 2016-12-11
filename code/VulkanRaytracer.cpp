@@ -16,7 +16,7 @@ namespace
 	};
 }
 
-VulkanRaytracer::VulkanRaytracer() : VulkanRenderer()
+VulkanRaytracer::VulkanRaytracer(const std::string& fileName) : VulkanRenderer(fileName)
 {
 	m_appName = "Raytracer Renderer";
 }
@@ -604,7 +604,7 @@ void VulkanRaytracer::loadMeshes()
 	{
 		vkMeshLoader::MeshCreateInfo meshCreateInfo;
 
-		loadMesh(getAssetPath() + "models/box/boxes.dae", nullptr, &m_sceneAttributes, vertexLayout, &meshCreateInfo);
+		loadMesh(getAssetPath() + m_fileName, nullptr, &m_sceneAttributes, vertexLayout, &meshCreateInfo);
 		std::cout << "Number of vertices: " << m_sceneAttributes.m_verticePositions.size() << std::endl;
 		std::cout << "Number of triangles: " << m_sceneAttributes.m_verticePositions.size() / 3 << std::endl;
 	}

@@ -136,7 +136,8 @@ CSceneRenderApp::CSceneRenderApp(int width, int height/*, const std::string& sce
 	}
 	m_context.m_window = m_window;
 
-	m_renderer = new VulkanHybridRenderer();
+	const std::string fileName = "models/bear/bear.dae";
+	m_renderer = new VulkanHybridRenderer(fileName);
 	m_renderer->initVulkan(m_context, true);
 	m_title = m_renderer->m_appName;
 

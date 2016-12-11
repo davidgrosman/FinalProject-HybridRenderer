@@ -33,7 +33,7 @@ namespace
 
 
 
-VulkanDeferredRenderer::VulkanDeferredRenderer() : VulkanRenderer()
+VulkanDeferredRenderer::VulkanDeferredRenderer(const std::string& fileName) : VulkanRenderer(fileName)
 	, m_offScreenCmdBuffer(VK_NULL_HANDLE)
 	, m_offscreenSemaphore(VK_NULL_HANDLE)
 {
@@ -525,7 +525,10 @@ void VulkanDeferredRenderer::loadMeshes()
 	{
 		vkMeshLoader::MeshCreateInfo meshCreateInfo;
 
-		loadMesh(getAssetPath() + "models/box/boxes.dae", &m_sceneMeshes.m_model, nullptr, vertexLayout, &meshCreateInfo);
+		SSceneAttributes sceneAttributes;
+		loadMesh(getAssetPath() + m_fileName, &m_sceneMeshes.m_model, &sceneAttributes, vertexLayout, &meshCreateInfo);
+		std::cout << "Number of vertices: " << sceneAttributes.m_verticePositions.size() << std::endl;
+		std::cout << "Number of triangles: " << sceneAttributes.m_verticePositions.size() / 3 << std::endl;
 	}
 
 	//{

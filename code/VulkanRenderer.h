@@ -46,7 +46,7 @@ class VulkanRenderer
 {
 public:
 
-	VulkanRenderer();
+	VulkanRenderer(const std::string& fileName);
 	~VulkanRenderer();
 
 	// Setup the vulkan instance, enable required extensions and connect to the physical device (GPU)
@@ -167,7 +167,7 @@ public:
 		vkMeshLoader::MeshCreateInfo *meshCreateInfo = NULL);
 
 	std::string m_appName = "Vulkan Renderer";
-
+	std::string m_fileName = "";
 protected:
 
 	// Returns the base asset path (for shaders, models, textures) depending on the os
