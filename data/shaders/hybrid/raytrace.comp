@@ -11,7 +11,7 @@
 #define SQRT_OF_ONE_THIRD 0.5773502691896257645091487805019574556476
 #define EPSILON 0.0001
 #define MAXLEN 1000.0
-#define TRACEDEPTH 4
+#define TRACEDEPTH 3
 
 // ===== STRUCT DEFINITION ===== //
 struct Light {
@@ -35,7 +35,6 @@ struct Material
 
 struct Triangle
 {
-	int id;
 	int materialId;
 
 	vec3 vert0;
@@ -57,7 +56,6 @@ struct PathSegment {
 	Ray ray;
 	vec3 color;
 	int remainingBounces;
-	bool shouldTerminate;
 	int objectId;
 };
 
@@ -203,7 +201,6 @@ void scatterRay(
 
 void buildTriangle(int i, inout Triangle tri) {
 	
-	tri.id = i;
 	tri.materialId = indicesAndMaterialID[i].w;
 	tri.vert0 = vec3(positions[indicesAndMaterialID[i].x]);
 	tri.vert1 = vec3(positions[indicesAndMaterialID[i].y]);
@@ -358,46 +355,46 @@ void shadeMaterial(
 	Material material = materials[intersect.materialId];
 
 
-		for (int i = 0; i < 10; ++i) {
+	for (int i = 0; i < 10; ++i) {
 					
-			if (i >= ubo.lightCount) {
-				break;
-			}
+		if (i >= ubo.lightCount) {
+			break;
+		}
 
-			vec3 lightVec = normalize(vec3(ubo.lights[i].position) - intersect.hitPoint);
-			float dist = length(vec3(ubo.lights[i].position) - intersect.hitPoint);
+		vec3 lightVec = normalize(vec3(ubo.lights[i].position) - intersect.hitPoint);
+		float dist = length(vec3(ubo.lights[i].position) - intersect.hitPoint);
 		
-			if (dist >= ubo.lights[i].radius) {
-				continue;
-			}
+		if (dist >= ubo.lights[i].radius) {
+			continue;
+		}
 
-			// Light feeler test
-			Ray feeler;
-			feeler.origin = intersect.hitPoint + 0.001 * intersect.hitNormal;
-			feeler.direction = lightVec;
+		// Light feeler test
+		Ray feeler;
+		feeler.origin = intersect.hitPoint + 0.001 * intersect.hitNormal;
+		feeler.direction = lightVec;
 			
-			// @note: only compute shadows for the ground
-			float shadow = 1;
-			if (intersect.materialId == 3) {
-				shadow = calcShadow(feeler, intersect.materialId, dist); 
-			}
-	
-			// Attenuation
-			float atten = ubo.lights[i].radius - dist;//ubo.lights[i].radius / (pow(dist, 2.0) + 1.0);
-		
-			// Diffuse195
-			float diffuse = lightDiffuse(intersect.hitNormal, lightVec);
-			vec3 diffuseColor = diffuse * vec3(material.diffuse);
-		
-			// Specular
-			float specular = lightSpecular(vec3(ubo.cameraPosition), intersect.hitNormal, lightVec, 1.0);
-			vec3 specularColor = specular * ubo.lights[i].color; 
-		
-			path.color = diffuseColor * ubo.lights[i].color;
-			path.color *= shadow * atten;
+		// @note: only compute shadows for the ground
+		float shadow = 1;
+		if (intersect.materialId == 0) {
+			shadow = calcShadow(feeler, intersect.materialId, dist); 
 		}
 	
-		if (material.refracti > 1.2) {
+		// Attenuation
+		float atten = ubo.lights[i].radius - dist;//ubo.lights[i].radius / (pow(dist, 2.0) + 1.0);
+		
+		// Diffuse
+		float diffuse = lightDiffuse(intersect.hitNormal, lightVec);
+		vec3 diffuseColor = diffuse * vec3(material.diffuse);
+		
+		// Specular
+		float specular = lightSpecular(vec3(ubo.cameraPosition), intersect.hitNormal, lightVec, 1.0);
+		vec3 specularColor = specular * ubo.lights[i].color; 
+		
+		path.color = diffuseColor * ubo.lights[i].color;
+		path.color *= shadow * atten;
+	}
+	
+	if (material.refracti > 1.0) {
 		float ei = 1.0;
 		float et = 1.1;//material.refracti;
 		bool entering = dot(path.ray.direction, intersect.hitNormal) < 0;
@@ -412,15 +409,11 @@ void shadeMaterial(
 		path.ray.origin = intersect.hitPoint + 0.001 * path.ray.direction;
 		path.remainingBounces--;
 		path.color *= clamp(abs(dot(path.ray.direction, intersect.hitNormal)), 0, 1) * vec3(1, 1, 1) * 0.1;
+		path.objectId = intersect.materialId;
 
 	} else {
 		path.remainingBounces = 0;
 	}
-
-	//path.ray.direction = normalize(reflect(path.ray.direction, intersect.hitNormal));
-	//path.ray.origin = intersect.hitPoint + 0.01 * path.ray.direction;
-
-
 }
 
 vec3 renderScene(inout PathSegment path)
@@ -449,14 +442,13 @@ void main()
 	vec3 diffuseColor = texture(materialIDsImage, uv).rgb;
 
 	// Terminate early if we didn't hit anything!
-	if (diffuseColor.r == 0 && diffuseColor.r == 0 && diffuseColor.r == 0) {
+	if (diffuseColor.r <= EPSILON && diffuseColor.g <= EPSILON && diffuseColor.b <= EPSILON) {
 		imageStore(resultImage, ivec2(gl_GlobalInvocationID.xy), vec4(0, 0, 0, 1.0));
 		return;	 
 	}
 
 	PathSegment path;
 	path.remainingBounces = TRACEDEPTH;
-	path.shouldTerminate = false;
 	path.ray.direction = normalize(position - vec3(ubo.cameraPosition));
 	path.ray.origin = position + 0.01 * path.ray.direction;
 	path.color = vec3(0,0,0);
