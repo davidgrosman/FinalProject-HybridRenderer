@@ -1710,9 +1710,9 @@ void VulkanHybridRenderer::updateUniformBufferDeferredLights(SRendererContext& c
 	m_uboFragmentLights.m_lights[0].color = glm::vec3(0.8f, 0.8f, 0.7f);
 	m_uboFragmentLights.m_lights[0].radius = 15.0f;
 	// Red
-	m_uboFragmentLights.m_lights[1].position = glm::vec4(-2.0f, -5.0f, 0.0f, 0.0f);
-	m_uboFragmentLights.m_lights[1].color = glm::vec3(1.0f, 0.0f, 0.0f);
-	m_uboFragmentLights.m_lights[1].radius = 15.0f;
+	m_uboFragmentLights.m_lights[1].position = glm::vec4(-2.0f, -6.0f, 0.0f, 0.0f);
+	m_uboFragmentLights.m_lights[1].color = glm::vec3(0.6f, 0.2f, 0.2f);
+	m_uboFragmentLights.m_lights[1].radius = 10.0f;
 	// Blue
 	m_uboFragmentLights.m_lights[2].position = glm::vec4(2.0f, 0.0f, 0.0f, 0.0f);
 	m_uboFragmentLights.m_lights[2].color = glm::vec3(0.0f, 0.0f, 2.5f);
@@ -1760,7 +1760,7 @@ void VulkanHybridRenderer::updateUniformBufferRaytracing(SRendererContext& conte
 	for (int i = 0; i < 6; ++i) {
 		m_compute.ubo.m_lights[i] = m_uboFragmentLights.m_lights[i];
 	}
-	m_compute.ubo.m_lightCount = 1;
+	m_compute.ubo.m_lightCount = 1 + m_addLight;
 	m_compute.ubo.m_materialCount = m_sceneMeshes.m_model.meshAttributes.m_materials.size();
 
 	// Update user flags
@@ -1836,6 +1836,18 @@ void VulkanHybridRenderer::toggleReflection()
 
 	// Toggle flag
 	m_compute.ubo.m_isReflection = m_enableReflection;
+
+	uint8_t *pData;
+	VK_CHECK_RESULT(vkMapMemory(m_device, m_compute.m_buffers.ubo.memory, 0, sizeof(m_compute.ubo), 0, (void **)&pData));
+	memcpy(pData, &m_compute.ubo, sizeof(m_compute.ubo));
+	vkUnmapMemory(m_device, m_compute.m_buffers.ubo.memory);
+}
+
+void VulkanHybridRenderer::addLight() {
+	VulkanRenderer::addLight();
+	reBuildRaytracingCommandBuffers();
+
+	m_compute.ubo.m_lightCount += m_addLight;
 
 	uint8_t *pData;
 	VK_CHECK_RESULT(vkMapMemory(m_device, m_compute.m_buffers.ubo.memory, 0, sizeof(m_compute.ubo), 0, (void **)&pData));

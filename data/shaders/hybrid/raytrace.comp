@@ -671,8 +671,8 @@ void shadeMaterial(
 		vec3 specularColor = specular * ubo.lights[i].color; 
 		
 		if (material.refracti < 1.1) {
-			path.color = diffuseColor * ubo.lights[i].color;
-			path.color *= shadow * atten;
+			path.color += diffuseColor * ubo.lights[i].color * atten;
+			path.color *= shadow;
 		}
 	}
 	

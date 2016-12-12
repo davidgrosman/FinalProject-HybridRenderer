@@ -70,6 +70,7 @@ public:
 	void toggleShadows() override;
 	void toggleTransparency() override;
 	void toggleReflection() override;
+	void addLight() override;
 
 	// Called when view change occurs
 	// Can be overriden in derived class to e.g. update uniform buffers 
@@ -269,7 +270,7 @@ private:
 			uint32_t    m_isReflection = false;
 
 			// Padding to be 16 bytes aligned
-			glm::ivec2 _pad;
+			float _pad;
 		} ubo;
 
 	} m_compute;

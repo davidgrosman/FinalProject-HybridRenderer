@@ -309,6 +309,7 @@ VulkanRenderer::VulkanRenderer(const std::string& fileName)
 , m_enableShadows(false)
 , m_enableTransparency(false)
 , m_enableReflection(false)
+, m_addLight(0)
 , m_fileName(fileName)
 {
 }
@@ -503,6 +504,18 @@ void VulkanRenderer::render(SRendererContext& context)
 		toggleDebugDisplay();
 	} else if (context.m_enableBVH != m_enableBVH) {
 		toggleBVH();
+	}
+	else if (context.m_enableShadows != m_enableShadows) {
+		toggleShadows();
+	}
+	else if (context.m_enableTransparency != m_enableTransparency) {
+		toggleTransparency();
+	}
+	else if (context.m_enableReflection != m_enableReflection) {
+		toggleReflection();
+	}
+	else if (context.m_addLight != m_addLight) {
+		addLight();
 	}
 
 	// Step 11 - Main loop
