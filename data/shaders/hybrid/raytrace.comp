@@ -114,6 +114,7 @@ layout (std140, binding = 7) uniform UBO
 	bool isShadows;
 	bool isTransparency;
 	bool isReflection;
+	bool isColorByRayBounces;
 } ubo;
 
 
@@ -760,7 +761,7 @@ void main()
 	path.ray.origin = position + 0.01 * path.ray.direction;
 	path.color = vec3(0,0,0);
 	path.objectId = materialId; // Use material ID as object ID
-	path.bounces = 1;
+	path.bounces = 0;
 	
 	Intersection intersection;
 	intersection.hitPoint = position;
@@ -779,8 +780,12 @@ void main()
 	}
 
 	// Color by the number of bounces
-	//imageStore(resultImage, ivec2(gl_GlobalInvocationID.xy), vec4(path.bounces / TRACEDEPTH, path.bounces / TRACEDEPTH, path.bounces / TRACEDEPTH, 1.0));
+	if (ubo.isColorByRayBounces) {
+		float val = path.bounces / TRACEDEPTH;
+		imageStore(resultImage, ivec2(gl_GlobalInvocationID.xy), vec4(val, val, val, 1.0));
+	} else {
+		imageStore(resultImage, ivec2(gl_GlobalInvocationID.xy), vec4(path.color, 1.0));
+	}
 	
-	imageStore(resultImage, ivec2(gl_GlobalInvocationID.xy), vec4(path.color, 1.0));
 
 }

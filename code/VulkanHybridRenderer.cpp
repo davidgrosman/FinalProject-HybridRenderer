@@ -1768,6 +1768,7 @@ void VulkanHybridRenderer::updateUniformBufferRaytracing(SRendererContext& conte
 	m_compute.ubo.m_isShadows = context.m_enableShadows;
 	m_compute.ubo.m_isTransparency = context.m_enableTransparency;
 	m_compute.ubo.m_isReflection = context.m_enableReflection;
+	m_compute.ubo.m_isColorByRayBounces = context.m_enableColorByRayBounces;
 
 	uint8_t *pData;
 	VK_CHECK_RESULT(vkMapMemory(m_device, m_compute.m_buffers.ubo.memory, 0, sizeof(m_compute.ubo), 0, (void **)&pData));
@@ -1836,6 +1837,18 @@ void VulkanHybridRenderer::toggleReflection()
 
 	// Toggle flag
 	m_compute.ubo.m_isReflection = m_enableReflection;
+
+	uint8_t *pData;
+	VK_CHECK_RESULT(vkMapMemory(m_device, m_compute.m_buffers.ubo.memory, 0, sizeof(m_compute.ubo), 0, (void **)&pData));
+	memcpy(pData, &m_compute.ubo, sizeof(m_compute.ubo));
+	vkUnmapMemory(m_device, m_compute.m_buffers.ubo.memory);
+}
+
+void VulkanHybridRenderer::toggleColorByRayBounces() {
+	VulkanRenderer::toggleColorByRayBounces();
+	reBuildRaytracingCommandBuffers();
+
+	m_compute.ubo.m_isColorByRayBounces = m_enableColorByRayBounces;
 
 	uint8_t *pData;
 	VK_CHECK_RESULT(vkMapMemory(m_device, m_compute.m_buffers.ubo.memory, 0, sizeof(m_compute.ubo), 0, (void **)&pData));

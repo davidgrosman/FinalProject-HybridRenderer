@@ -196,6 +196,8 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 			pScene->m_context.m_enableTransparency = !pScene->m_context.m_enableTransparency;
 		else if (key == GLFW_KEY_R)
 			pScene->m_context.m_enableReflection = !pScene->m_context.m_enableReflection;
+		else if (key == GLFW_KEY_C)
+			pScene->m_context.m_enableColorByRayBounces = !pScene->m_context.m_enableColorByRayBounces;
 		else if (key == GLFW_KEY_L)
 			// Toggle adding light for now
 			pScene->m_context.m_addLight = pScene->m_context.m_addLight == 0 ? 1 : 0;

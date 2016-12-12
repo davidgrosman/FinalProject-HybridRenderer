@@ -309,6 +309,7 @@ VulkanRenderer::VulkanRenderer(const std::string& fileName)
 , m_enableShadows(false)
 , m_enableTransparency(false)
 , m_enableReflection(false)
+, m_enableColorByRayBounces(false)
 , m_addLight(0)
 , m_fileName(fileName)
 {
@@ -513,6 +514,9 @@ void VulkanRenderer::render(SRendererContext& context)
 	}
 	else if (context.m_enableReflection != m_enableReflection) {
 		toggleReflection();
+	}
+	else if (context.m_enableColorByRayBounces != m_enableColorByRayBounces) {
+		toggleColorByRayBounces();
 	}
 	else if (context.m_addLight != m_addLight) {
 		addLight();

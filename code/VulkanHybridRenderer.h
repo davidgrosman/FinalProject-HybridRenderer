@@ -70,6 +70,7 @@ public:
 	void toggleShadows() override;
 	void toggleTransparency() override;
 	void toggleReflection() override;
+	void toggleColorByRayBounces() override;
 	void addLight() override;
 
 	// Called when view change occurs
@@ -268,9 +269,9 @@ private:
 			uint32_t    m_isShadows = false;
 			uint32_t    m_isTransparency = false;
 			uint32_t    m_isReflection = false;
+			uint32_t    m_isColorByRayBounces = false;
 
 			// Padding to be 16 bytes aligned
-			float _pad;
 		} ubo;
 
 	} m_compute;

@@ -70,6 +70,7 @@ public:
 	virtual void toggleShadows() { m_enableShadows = !m_enableShadows; }
 	virtual void toggleTransparency() { m_enableTransparency = !m_enableTransparency; }
 	virtual void toggleReflection() { m_enableReflection = !m_enableReflection; }
+	virtual void toggleColorByRayBounces() { m_enableColorByRayBounces = !m_enableColorByRayBounces; }
 	virtual void addLight() { m_addLight = m_addLight == 0 ? 1 : 0; }
 
 	// Prepare the frame for workload submission
@@ -214,6 +215,7 @@ protected:
 	bool m_enableShadows;
 	bool m_enableTransparency;
 	bool m_enableReflection;
+	bool m_enableColorByRayBounces;
 	uint32_t m_addLight;
 
 	// Last frame time, measured using a high performance timer (if available)
