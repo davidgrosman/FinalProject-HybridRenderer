@@ -68,6 +68,7 @@ struct PathSegment {
 	vec3 color;
 	int remainingBounces;
 	int objectId;
+	int bounces;
 };
 
 struct Intersection {
@@ -519,14 +520,15 @@ Intersection computeIntersections(
 	int materialID = 0;
 	Intersection intersection;
 
+
 	// Triangles
 
 	for (int i = 0; i < indicesAndMaterialID.length(); ++i) {
 		
-		if (indicesAndMaterialID[i].w == path.objectId) {
-			// Skip self
-			continue;
-		}
+		//if (indicesAndMaterialID[i].w == path.objectId) {
+		//	// Skip self
+		//	continue;
+		//}
 
 		 //Reconstruct triangle
 		Triangle tri;
@@ -618,7 +620,6 @@ void shadeMaterial(
 
 	Material material = materials[intersect.materialId];
 
-
 	for (int i = 0; i < 10; ++i) {
 					
 		if (i >= ubo.lightCount) {
@@ -643,7 +644,9 @@ void shadeMaterial(
 			
 		// @note: only compute shadows for the ground
 		float shadow = 1;
-		shadow = calcShadow(feeler, intersect.materialId, dist); 
+		if (intersect.materialId == 3) {
+			shadow = calcShadow(feeler, intersect.materialId, dist); 
+		}
 	
 		// Attenuation
 		float atten = ubo.lights[i].radius - dist;//ubo.lights[i].radius / (pow(dist, 2.0) + 1.0);
@@ -653,16 +656,19 @@ void shadeMaterial(
 		vec3 diffuseColor = diffuse * vec3(material.diffuse);
 		
 		// Specular
-		float specular = lightSpecular(vec3(ubo.cameraPosition), intersect.hitNormal, lightVec, 1.0);
+		float specular = lightSpecular(vec3(ubo.cameraPosition), intersect.hitNormal, lightVec, 32);
 		vec3 specularColor = specular * ubo.lights[i].color; 
 		
-		path.color = diffuseColor * ubo.lights[i].color;
-		path.color *= shadow * atten;
+		if (material.refracti < 1.1) {
+			path.color = diffuseColor * ubo.lights[i].color;
+			path.color *= shadow * atten;
+		}
 	}
 	
 	if (material.refracti > 1.0) {
+
 		float ei = 1.0;
-		float et = material.refracti;
+		float et = 1.1;//material.refracti;
 		bool entering = dot(path.ray.direction, intersect.hitNormal) < 0;
 		if (!entering) {
 			float t = ei;
@@ -671,12 +677,20 @@ void shadeMaterial(
 		}
 
 		float eta = ei / et;
-		path.ray.direction = normalize(refract(path.ray.direction, intersect.hitNormal, eta));
-		path.ray.origin = intersect.hitPoint + 0.001 * path.ray.direction;
-		path.remainingBounces--;
-		path.color *= clamp(abs(dot(path.ray.direction, intersect.hitNormal)), 0, 1) * vec3(1, 1, 1) * 0.1;
+		path.ray.direction = normalize(refract(path.ray.origin, intersect.hitNormal, eta));
+		path.ray.origin = intersect.hitPoint + 0.1 * path.ray.direction;
+		float alpha = 0.1;
+		path.color = mix(path.color, clamp(abs(dot(path.ray.direction, intersect.hitNormal)), 0, 1) * vec3(material.diffuse), alpha);
 		path.objectId = intersect.materialId;
+		path.remainingBounces--;
+		path.bounces++;
 
+	} else if (material.reflectivity < 0.0) {
+		path.ray.direction = normalize(reflect(path.ray.origin, intersect.hitNormal));
+		path.ray.origin = intersect.hitPoint + 0.1 * path.ray.direction;
+		path.color *= clamp(abs(dot(path.ray.direction, intersect.hitNormal)), 0, 1) * vec3(material.specular) * 1.5;
+		path.remainingBounces--;
+		path.bounces++;
 	} else {
 		path.remainingBounces = 0;
 	}
@@ -735,6 +749,7 @@ void main()
 	path.ray.origin = position + 0.01 * path.ray.direction;
 	path.color = vec3(0,0,0);
 	path.objectId = materialId; // Use material ID as object ID
+	path.bounces = 1;
 	
 	Intersection intersection;
 	intersection.hitPoint = position;
@@ -752,5 +767,9 @@ void main()
 		shadeMaterial(intersection, path);
 	}
 
+	// Color by the number of bounces
+	//imageStore(resultImage, ivec2(gl_GlobalInvocationID.xy), vec4(path.bounces / TRACEDEPTH, path.bounces / TRACEDEPTH, path.bounces / TRACEDEPTH, 1.0));
+	
 	imageStore(resultImage, ivec2(gl_GlobalInvocationID.xy), vec4(path.color, 1.0));
+
 }
