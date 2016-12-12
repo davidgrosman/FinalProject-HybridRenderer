@@ -148,7 +148,7 @@ CSceneRenderApp::CSceneRenderApp(int width, int height/*, const std::string& sce
 	}
 	m_context.m_window = m_window;
 
-	const std::string fileName = "models/astronaut/astronauts.dae";
+	const std::string fileName = "models/box/boxes_transparent.dae";
 	m_renderer = new VulkanHybridRenderer(fileName);
 	m_renderer->initVulkan(m_context, true);
 	m_title = m_renderer->m_appName;
@@ -190,6 +190,12 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 			pScene->m_context.m_debugDraw = !pScene->m_context.m_debugDraw;
 		else if (key == GLFW_KEY_B)
 			pScene->m_context.m_enableBVH = !pScene->m_context.m_enableBVH;
+		else if (key == GLFW_KEY_Y)
+			pScene->m_context.m_enableShadows = !pScene->m_context.m_enableShadows;
+		else if (key == GLFW_KEY_T)
+			pScene->m_context.m_enableTransparency = !pScene->m_context.m_enableTransparency;
+		else if (key == GLFW_KEY_R)
+			pScene->m_context.m_enableReflection = !pScene->m_context.m_enableReflection;
 	}
 
 	Camera& cam = pScene->getCamera();

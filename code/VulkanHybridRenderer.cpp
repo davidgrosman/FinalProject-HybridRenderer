@@ -700,6 +700,13 @@ void VulkanHybridRenderer::reBuildCommandBuffers()
 	buildCommandBuffers();
 }
 
+void VulkanHybridRenderer::reBuildRaytracingCommandBuffers() {
+	// Rebuild compute command buffers
+	vkFreeCommandBuffers(m_device, m_cmdPool, 1, &m_compute.commandBuffer);
+	m_compute.commandBuffer = VulkanRenderer::createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, false);
+	buildRaytracingCommandBuffer();
+}
+
 void VulkanHybridRenderer::prepareTextureTarget(vkUtils::VulkanTexture* tex, uint32_t width, uint32_t height, VkFormat format) {
 	// Get device properties for the requested texture format
 	VkFormatProperties formatProperties;
@@ -1755,7 +1762,12 @@ void VulkanHybridRenderer::updateUniformBufferRaytracing(SRendererContext& conte
 	}
 	m_compute.ubo.m_lightCount = 1;
 	m_compute.ubo.m_materialCount = m_sceneMeshes.m_model.meshAttributes.m_materials.size();
+
+	// Update user flags
 	m_compute.ubo.m_isBVH = context.m_enableBVH;
+	m_compute.ubo.m_isShadows = context.m_enableShadows;
+	m_compute.ubo.m_isTransparency = context.m_enableTransparency;
+	m_compute.ubo.m_isReflection = context.m_enableReflection;
 
 	uint8_t *pData;
 	VK_CHECK_RESULT(vkMapMemory(m_device, m_compute.m_buffers.ubo.memory, 0, sizeof(m_compute.ubo), 0, (void **)&pData));
@@ -1778,14 +1790,52 @@ void VulkanHybridRenderer::toggleDebugDisplay()
 void VulkanHybridRenderer::toggleBVH()
 {
 	VulkanRenderer::toggleBVH();
-
-	// Rebuild compute command buffers
-	vkFreeCommandBuffers(m_device, m_cmdPool, 1, &m_compute.commandBuffer);
-	m_compute.commandBuffer = VulkanRenderer::createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, false);
-	buildRaytracingCommandBuffer();
+	reBuildRaytracingCommandBuffers();
 
 	// Toggle bvh flag
-	m_compute.ubo.m_isBVH = m_enableBVH ? 1 : 0;
+	m_compute.ubo.m_isBVH = m_enableBVH;
+
+	uint8_t *pData;
+	VK_CHECK_RESULT(vkMapMemory(m_device, m_compute.m_buffers.ubo.memory, 0, sizeof(m_compute.ubo), 0, (void **)&pData));
+	memcpy(pData, &m_compute.ubo, sizeof(m_compute.ubo));
+	vkUnmapMemory(m_device, m_compute.m_buffers.ubo.memory);
+}
+
+void VulkanHybridRenderer::toggleShadows()
+{
+	VulkanRenderer::toggleShadows();
+	reBuildRaytracingCommandBuffers();
+
+	// Toggle flag
+	m_compute.ubo.m_isShadows = m_enableShadows;
+
+	uint8_t *pData;
+	VK_CHECK_RESULT(vkMapMemory(m_device, m_compute.m_buffers.ubo.memory, 0, sizeof(m_compute.ubo), 0, (void **)&pData));
+	memcpy(pData, &m_compute.ubo, sizeof(m_compute.ubo));
+	vkUnmapMemory(m_device, m_compute.m_buffers.ubo.memory);
+}
+
+void VulkanHybridRenderer::toggleTransparency()
+{
+	VulkanRenderer::toggleTransparency();
+	reBuildRaytracingCommandBuffers();
+
+	// Toggle flag
+	m_compute.ubo.m_isTransparency = m_enableTransparency;
+
+	uint8_t *pData;
+	VK_CHECK_RESULT(vkMapMemory(m_device, m_compute.m_buffers.ubo.memory, 0, sizeof(m_compute.ubo), 0, (void **)&pData));
+	memcpy(pData, &m_compute.ubo, sizeof(m_compute.ubo));
+	vkUnmapMemory(m_device, m_compute.m_buffers.ubo.memory);
+}
+
+void VulkanHybridRenderer::toggleReflection()
+{
+	VulkanRenderer::toggleReflection();
+	reBuildRaytracingCommandBuffers();
+
+	// Toggle flag
+	m_compute.ubo.m_isReflection = m_enableReflection;
 
 	uint8_t *pData;
 	VK_CHECK_RESULT(vkMapMemory(m_device, m_compute.m_buffers.ubo.memory, 0, sizeof(m_compute.ubo), 0, (void **)&pData));

@@ -92,7 +92,7 @@ private:
 
 struct SRendererContext
 {
-	SRendererContext() : m_window(NULL), m_debugDraw(false), m_enableBVH(false)
+	SRendererContext() : m_window(NULL), m_debugDraw(false), m_enableBVH(false), m_enableShadows(false), m_enableTransparency(false), m_enableReflection(false)
 	{}
 	void getWindowSize(uint32_t& width, uint32_t& height);
 
@@ -101,6 +101,9 @@ struct SRendererContext
 
 	bool		m_debugDraw;
 	bool		m_enableBVH;
+	bool		m_enableShadows;
+	bool		m_enableTransparency;
+	bool        m_enableReflection;
 };
 
 #endif // _UTILITIES_H_

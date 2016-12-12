@@ -305,6 +305,10 @@ void VulkanRenderer::loadMesh(std::string filename, vkMeshLoader::MeshBuffer * m
 VulkanRenderer::VulkanRenderer(const std::string& fileName)
 : m_wasInitialized(false)
 , m_debugDisplay(false)
+, m_enableBVH(false)
+, m_enableShadows(false)
+, m_enableTransparency(false)
+, m_enableReflection(false)
 , m_fileName(fileName)
 {
 }

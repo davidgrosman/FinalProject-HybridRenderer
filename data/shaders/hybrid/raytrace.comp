@@ -108,7 +108,12 @@ layout (std140, binding = 7) uniform UBO
 	Light lights[6];
 	int lightCount;
 	int materialCount;
-	int isBVH;
+
+	// Toggle flags 
+	bool isBVH;
+	bool isShadows;
+	bool isTransparency;
+	bool isReflection;
 } ubo;
 
 
@@ -575,7 +580,7 @@ float calcShadow(in Ray feeler, in int objectId, in float t)
 		*/
 
 		// Option 2: computeIntersectionsWithRootLevelBvh - 1 Level BVH
-		if (ubo.isBVH == 1) {
+		if (ubo.isBVH) {
 			Intersection intersect = computeIntersectionsWithRootLevelBvh(feeler);
 			if (intersect.t > 0.0)
 			{
@@ -650,7 +655,7 @@ void shadeMaterial(
 			
 		// @note: only compute shadows for the ground
 		float shadow = 1;
-		if (intersect.materialId == 3) {
+		if (ubo.isShadows) {
 			shadow = calcShadow(feeler, intersect.materialId, dist); 
 		}
 	
@@ -671,7 +676,7 @@ void shadeMaterial(
 		}
 	}
 	
-	if (material.refracti > 1.0) {
+	if (ubo.isTransparency && material.refracti > 1.0) {
 
 		float ei = 1.0;
 		float et = 1.1;//material.refracti;
@@ -685,13 +690,13 @@ void shadeMaterial(
 		float eta = ei / et;
 		path.ray.direction = normalize(refract(path.ray.origin, intersect.hitNormal, eta));
 		path.ray.origin = intersect.hitPoint + 0.1 * path.ray.direction;
-		float alpha = 0.1;
+		float alpha = 0.3;
 		path.color = mix(path.color, clamp(abs(dot(path.ray.direction, intersect.hitNormal)), 0, 1) * vec3(material.diffuse), alpha);
 		path.objectId = intersect.materialId;
 		path.remainingBounces--;
 		path.bounces++;
 
-	} else if (material.reflectivity < 0.0) {
+	} else if (ubo.isReflection) {
 		path.ray.direction = normalize(reflect(path.ray.origin, intersect.hitNormal));
 		path.ray.origin = intersect.hitPoint + 0.1 * path.ray.direction;
 		path.color *= clamp(abs(dot(path.ray.direction, intersect.hitNormal)), 0, 1) * vec3(material.specular) * 1.5;

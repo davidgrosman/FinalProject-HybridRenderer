@@ -67,6 +67,9 @@ public:
 
 	void toggleDebugDisplay() override;
 	void toggleBVH() override;
+	void toggleShadows() override;
+	void toggleTransparency() override;
+	void toggleReflection() override;
 
 	// Called when view change occurs
 	// Can be overriden in derived class to e.g. update uniform buffers 
@@ -187,6 +190,7 @@ private:
 	void buildDeferredCommandBuffer();
 	void buildRaytracingCommandBuffer();
 	void reBuildCommandBuffers();
+	void reBuildRaytracingCommandBuffers();
 
 	void prepareTextureTarget(vkUtils::VulkanTexture *tex, uint32_t width, uint32_t height, VkFormat format);
 	void loadTextures();
@@ -257,8 +261,15 @@ private:
 			SSceneLight m_lights[6];
 			uint32_t	m_lightCount;
 			uint32_t    m_materialCount;
-			uint32_t	m_isBVH = 0;
-			float		_pad;
+
+			// toggle flags
+			uint32_t	m_isBVH = false;
+			uint32_t    m_isShadows = false;
+			uint32_t    m_isTransparency = false;
+			uint32_t    m_isReflection = false;
+
+			// Padding to be 16 bytes aligned
+			glm::ivec2 _pad;
 		} ubo;
 
 	} m_compute;
