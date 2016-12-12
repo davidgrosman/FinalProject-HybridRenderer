@@ -92,7 +92,7 @@ private:
 
 struct SRendererContext
 {
-	SRendererContext() : m_window(NULL), m_debugDraw(false)
+	SRendererContext() : m_window(NULL), m_debugDraw(false), m_enableBVH(false)
 	{}
 	void getWindowSize(uint32_t& width, uint32_t& height);
 
@@ -100,6 +100,7 @@ struct SRendererContext
 	Camera		m_camera;
 
 	bool		m_debugDraw;
+	bool		m_enableBVH;
 };
 
 #endif // _UTILITIES_H_

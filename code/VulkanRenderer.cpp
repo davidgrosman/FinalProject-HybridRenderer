@@ -497,6 +497,8 @@ void VulkanRenderer::render(SRendererContext& context)
 	if (context.m_debugDraw != m_debugDisplay)
 	{
 		toggleDebugDisplay();
+	} else if (context.m_enableBVH != m_enableBVH) {
+		toggleBVH();
 	}
 
 	// Step 11 - Main loop

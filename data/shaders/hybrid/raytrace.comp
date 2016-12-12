@@ -11,7 +11,7 @@
 #define SQRT_OF_ONE_THIRD 0.5773502691896257645091487805019574556476
 #define EPSILON 0.0001
 #define MAXLEN 1000.0
-#define TRACEDEPTH 3
+#define TRACEDEPTH 2
 
 // ===== STRUCT DEFINITION ===== //
 struct Light {
@@ -108,6 +108,7 @@ layout (std140, binding = 7) uniform UBO
 	Light lights[6];
 	int lightCount;
 	int materialCount;
+	int isBVH;
 } ubo;
 
 
@@ -573,36 +574,41 @@ float calcShadow(in Ray feeler, in int objectId, in float t)
 		}
 		*/
 
-		///// Option 2: computeIntersectionsWithRootLevelBvh - 1 Level BVH
-		Intersection intersect = computeIntersectionsWithRootLevelBvh(feeler);
-        if (intersect.t > 0.0)
-        {
-            return 0.5f;
-        }
+		// Option 2: computeIntersectionsWithRootLevelBvh - 1 Level BVH
+		if (ubo.isBVH == 1) {
+			Intersection intersect = computeIntersectionsWithRootLevelBvh(feeler);
+			if (intersect.t > 0.0)
+			{
+				return 0.5f;
+			}
+		} else {
 
-		///// Option 3:Reconstruct all scene triangles.
+			/// Option 3:Reconstruct all scene triangles.
 		
-		//for (int i = 0; i < indicesAndMaterialID.length(); ++i)
-		//{
+			for (int i = 0; i < indicesAndMaterialID.length(); ++i)
+			{
 		
-		//	if (indicesAndMaterialID[i].w == objectId)
-		//	{
-		//		// Skip self
-		//		continue;
-		//	}
+				if (indicesAndMaterialID[i].w == objectId)
+				{
+					// Skip self
+					continue;
+				}
         
-		//	// Reconstruct triangle
-		//	Triangle tri;
-		//	buildTriangle(i, tri);
+				// Reconstruct triangle
+				Triangle tri;
+				buildTriangle(i, tri);
 
-		//	vec3 tmp_normal;
-		//	vec3 tmp_hitPoint;
-		//	float tTri = triangleIntersect(tri, feeler, tmp_normal, tmp_hitPoint);
-		//	if (tTri > EPSILON && tTri < t)
-		//	{
-		//		return 0.5;
-		//	}
-		//}
+				vec3 tmp_normal;
+				vec3 tmp_hitPoint;
+				float tTri = triangleIntersect(tri, feeler, tmp_normal, tmp_hitPoint);
+				if (tTri > EPSILON && tTri < t)
+				{
+					return 0.5;
+				}
+			}
+
+		}
+
 		
 
 	return 1.0;

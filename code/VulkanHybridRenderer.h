@@ -66,6 +66,7 @@ public:
 	////////					Event-Handler Functions  								     ////////
 
 	void toggleDebugDisplay() override;
+	void toggleBVH() override;
 
 	// Called when view change occurs
 	// Can be overriden in derived class to e.g. update uniform buffers 
@@ -256,10 +257,9 @@ private:
 			SSceneLight m_lights[6];
 			uint32_t	m_lightCount;
 			uint32_t    m_materialCount;
-			glm::ivec2  _pad;
+			uint32_t	m_isBVH = 0;
+			float		_pad;
 		} ubo;
-
-		VkSemaphore semaphore;
 
 	} m_compute;
 };

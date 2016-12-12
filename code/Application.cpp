@@ -188,6 +188,8 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 	{
 		if (key == GLFW_KEY_F)
 			pScene->m_context.m_debugDraw = !pScene->m_context.m_debugDraw;
+		else if (key == GLFW_KEY_B)
+			pScene->m_context.m_enableBVH = !pScene->m_context.m_enableBVH;
 	}
 
 	Camera& cam = pScene->getCamera();

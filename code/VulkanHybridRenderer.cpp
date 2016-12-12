@@ -666,9 +666,6 @@ void VulkanHybridRenderer::buildRaytracingCommandBuffer() {
 
 	m_compute.commandBuffer = VulkanRenderer::createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, false);
 
-	// Create a semaphore used to synchronize offscreen rendering and usage
-	VkSemaphoreCreateInfo semaphoreCreateInfo = vkUtils::initializers::semaphoreCreateInfo();
-
 	VkCommandBufferBeginInfo cmdBufInfo = vkUtils::initializers::commandBufferBeginInfo();
 
 	VK_CHECK_RESULT(vkBeginCommandBuffer(m_compute.commandBuffer, &cmdBufInfo));
@@ -1758,6 +1755,7 @@ void VulkanHybridRenderer::updateUniformBufferRaytracing(SRendererContext& conte
 	}
 	m_compute.ubo.m_lightCount = 1;
 	m_compute.ubo.m_materialCount = m_sceneMeshes.m_model.meshAttributes.m_materials.size();
+	m_compute.ubo.m_isBVH = context.m_enableBVH;
 
 	uint8_t *pData;
 	VK_CHECK_RESULT(vkMapMemory(m_device, m_compute.m_buffers.ubo.memory, 0, sizeof(m_compute.ubo), 0, (void **)&pData));
@@ -1775,4 +1773,22 @@ void VulkanHybridRenderer::toggleDebugDisplay()
 	VulkanRenderer::toggleDebugDisplay();
 	reBuildCommandBuffers();
 	updateUniformBuffersScreen();
+}
+
+void VulkanHybridRenderer::toggleBVH()
+{
+	VulkanRenderer::toggleBVH();
+
+	// Rebuild compute command buffers
+	vkFreeCommandBuffers(m_device, m_cmdPool, 1, &m_compute.commandBuffer);
+	m_compute.commandBuffer = VulkanRenderer::createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, false);
+	buildRaytracingCommandBuffer();
+
+	// Toggle bvh flag
+	m_compute.ubo.m_isBVH = m_enableBVH ? 1 : 0;
+
+	uint8_t *pData;
+	VK_CHECK_RESULT(vkMapMemory(m_device, m_compute.m_buffers.ubo.memory, 0, sizeof(m_compute.ubo), 0, (void **)&pData));
+	memcpy(pData, &m_compute.ubo, sizeof(m_compute.ubo));
+	vkUnmapMemory(m_device, m_compute.m_buffers.ubo.memory);
 }

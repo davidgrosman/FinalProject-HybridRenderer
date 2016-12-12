@@ -66,6 +66,7 @@ public:
 	virtual void draw(SRendererContext& context) = 0;
 
 	virtual void toggleDebugDisplay() { m_debugDisplay = !m_debugDisplay; }
+	virtual void toggleBVH() { m_enableBVH = !m_enableBVH; }
 
 	// Prepare the frame for workload submission
 	// - Acquires the next image from the swap chain 
@@ -205,6 +206,7 @@ protected:
 	bool m_wasInitialized;
 
 	bool m_debugDisplay;
+	bool m_enableBVH;
 
 	// Last frame time, measured using a high performance timer (if available)
 	float m_frameTimer = 1.0f;
