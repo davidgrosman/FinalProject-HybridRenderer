@@ -104,7 +104,8 @@ void CApplication::Run() {
 	while (!glfwWindowShouldClose(m_window))
 	{
 		glfwPollEvents();
-
+		static int samples = 0;
+		static int fpsSamples = 0;
 		static auto start = std::chrono::system_clock::now();
 		auto now = std::chrono::system_clock::now();
 		int64_t timeElapsedInMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
@@ -113,6 +114,8 @@ void CApplication::Run() {
 			m_fps = (int) ( m_fpstracker / (timeElapsedInMs / 1000) );
 			m_fpstracker = 0;
 			start = now;
+			fpsSamples += m_fps;
+			samples++;
 		}
 
 		std::string title = m_title + " | " + std::to_string(m_fps) + " FPS | " + std::to_string(timeElapsedInMs) + " ms";
@@ -121,8 +124,17 @@ void CApplication::Run() {
 		float timeElapsedInS = timeElapsedInMs / 1000.0f;
 		Update(timeElapsedInS);
 
+		const int NUM_SAMPLES = 100;
+		if (samples == NUM_SAMPLES) {
+			fpsSamples /= NUM_SAMPLES;
+			std::cout << fpsSamples << std::endl;
+			samples = 0;
+			fpsSamples = 0;
+		}
+
 		m_frame++;
 		m_fpstracker++;
+		
 	}
 }
 
