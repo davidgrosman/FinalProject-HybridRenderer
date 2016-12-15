@@ -1,15 +1,20 @@
 # Final Project: Hybrid Ray-Raster Renderer in Vulkan
 ===============
 
-## Team members
+# Team members
 - **Names:** Trung Le and David Grosman.
 - **Tested on:** 
  * Microsoft Windows 10 Home, i7-4790 CPU @ 3.60GHz 12GB, GTX 980 Ti (Person desktop).
  * Microsoft Windows  7 Professional, i7-5600U @ 2.6GHz, 256GB, GeForce 840M (Personal laptop).
 
-## Overview
+# Overview
 
 ![](/docs/images/bear_boxes.gif)
+
+# Video demo (click on image)
+
+<a href="https://www.youtube.com/embed/LI-4krLiWOo" target="_blank"><img src="http://img.youtube.com/vi/LI-4krLiWOo/0.jpg" 
+alt="Hybrid ray-raster" width="560" height="315" border="10" /></a>
 
 Deferred rendering has gained major popularity in real-time rendering. Some of its advantages are the fact that it reduces the rendering algorithm complexity from `O(numLights*numObjects)` to `O(numLights + numObjects)` by rendering a scene in two passes: It first renders the scene geometry into a G-Buffer and then, uses that G-Buffer to calculate the scene lighting in a second pass. It is also easier to maintain since the Lighting stage is entirely disconnected from the Geometry stage. Unfortunately, deferred rendering is not the best solution for all cases:
 
@@ -122,6 +127,7 @@ In order to test our performance we a) varying the number of moving lights, 2) z
 - 5086 triangles and 15258 vertices
 - 7 materials: 3 refractive surfaces and 4 diffuse surfaces
 - 3 refractive spheres and 7 diffuse objects
+- Framerate is capped at 60FPS for all tests
 - Tested on Microsoft Windows 10 Home, Microsoft Visual Studio 2015, target x64, i7-4790 CPU @ 3.60GHz 12GB, GTX 980 Ti
 
 **1. Far scene.** Camera is at -30.0f Z unit away
@@ -146,6 +152,10 @@ A lot of the improvement lies in an efficient acceleration data structure and ef
 
 Similarly, we compared the same scene with our raytracing only renderer, but the framerate was consistently at 1FPS, so we decided that a hybrid renderer is in fact faster that traditional raytracing.
 
+### Different work groups size for compute shader
+
+We varied the dimension of the compute shader invocations, but that didn't affect performance.
+
 # Final thoughts
 
 The project had a great deal of software engineering in term of developing a Vulkan graphics engine and team collaboration. It was also a great opportunity for us to explore the possibility of using raytracing in real-time application. Eventhough we were not able to achieve the frame-rate compare to PowerVR raytracing demo, we gained a great deal of experience.
@@ -163,6 +173,18 @@ The project had a great deal of software engineering in term of developing a Vul
 ![](/docs/images/raytraced_octocat.png)
 
 ### Bloopers (yes, of course)
+
+![](/docs/images/bloopers/hybrid_circular.png)
+
+Refraction gone wrong.
+
+![](/docs/images/bloopers/hybrid_messed_up_grunt.png)
+
+This is just bad attribute stride.
+
+![](/docs/images/bloopers/hybrid_uninitialized_colors.png)
+
+This is when a vertex attribute weren't intialized correctly,
 
 # Build instruction
 
