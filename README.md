@@ -1,14 +1,9 @@
-# Final Project: Hybrid Ray-Raster Renderer in Vulkan
+# University of Pennsylvania, CIS 565: GPU Programming and Architecture.
+## Final Project: Hybrid Ray-Raster Renderer in Vulkan
+# by Trung Le ([website](http://www.trungtuanle.com/)) and David Grosman.
 ===============
 
 ![](/docs/images/bear_boxes.gif)
-
-
-# Team members
-- **Names:** Trung Le ([website](http://www.trungtuanle.com/)) and David Grosman.
-- **Tested on:** 
- * Microsoft Windows 10 Home, i7-4790 CPU @ 3.60GHz 12GB, GTX 980 Ti (Desktop).
- * Microsoft Windows  7 Professional, i7-5600U @ 2.6GHz, 256GB, GeForce 840M (Laptop).
 
 ### Video demo (click on image) and [Presentation](https://docs.google.com/presentation/d/1Am7_PH8csx87xi8OX_wCySGsZiqS8YksmKGhxwrubdI/edit#slide=id.p)
 
@@ -157,7 +152,7 @@ Similarly, we compared the same scene with our raytracing only renderer, but the
 
 We varied the dimension of the compute shader invocations, but that didn't affect performance.
 
-# Final thoughts
+## Final thoughts
 
 The project had a great deal of software engineering in term of developing a Vulkan graphics engine and team collaboration. It was also a great opportunity for us to explore the possibility of using raytracing in real-time application. Even though we were not able to achieve a similar frame-rate as PowerVR raytracing demo, we gained a great deal of experience.
 
@@ -188,8 +183,10 @@ This is just bad attribute stride.
 This is when a vertex attribute weren't intialized correctly,
 
 # Build instruction
-
-Our project uses CMake to build. Requires a Vulkan-capable graphics card, Visual Studio 2013, target platform x64.
+- Our project uses CMake to build. Requires a Vulkan-capable graphics card, Visual Studio 2013, target platform x64.
+- **Tested on:** 
+ * Microsoft Windows 10 Home, i7-4790 CPU @ 3.60GHz 12GB, GTX 980 Ti (Desktop).
+ * Microsoft Windows  7 Professional, i7-5600U @ 2.6GHz, 256GB, GeForce 840M (Laptop).
 
 # Credits
 
