@@ -12,7 +12,7 @@
 #define EPSILON 0.0001
 #define MAXLEN 1000.0
 #define TRACEDEPTH 2
-#define GROUND_MESH_IDX 1
+#define GROUND_MESH_IDX 2
 
 // ===== STRUCT DEFINITION ===== //
 struct Light {
@@ -85,25 +85,24 @@ struct Intersection {
 layout (local_size_x = 16, local_size_y = 16) in;
 layout (binding = 0) uniform sampler2D positionsImage;
 layout (binding = 1) uniform sampler2D normalsImage;
-layout (binding = 2) uniform sampler2D materialIDsImage;
-layout (binding = 3, rgba8) uniform writeonly image2D resultImage;
+layout (binding = 2, rgba8) uniform writeonly image2D resultImage;
 
-layout (std140, binding = 4) buffer TriangleIndices
+layout (std140, binding = 3) buffer TriangleIndices
 {
 	ivec4 indicesAndMaterialID[ ];
 };
 
-layout (std140, binding = 5) buffer TrianglePositions
+layout (std140, binding = 4) buffer TrianglePositions
 {
 	vec4 positions[ ];
 };
 
-layout (std140, binding = 6) buffer TriangleNormals
+layout (std140, binding = 5) buffer TriangleNormals
 {
 	vec4 normals[ ];
 };
 
-layout (std140, binding = 7) uniform UBO 
+layout (std140, binding = 6) uniform UBO 
 {
 	vec4 cameraPosition;
 	Light lights[6];
@@ -119,12 +118,12 @@ layout (std140, binding = 7) uniform UBO
 } ubo;
 
 
-layout (std140, binding = 8) uniform Materials
+layout (std140, binding = 7) uniform Materials
 {
 	Material materials[10];
 };
 
-layout (std140, binding = 9) buffer BVHAabbNodes
+layout (std140, binding = 8) buffer BVHAabbNodes
 {
     BVHAabb bvhNodes[ ];
 };
@@ -746,7 +745,7 @@ void shadeMaterial(
 			vec3 diffuseColor = diffuse * vec3(material.diffuse);
 		
 			// Specular
-			float specular = lightSpecular(vec3(ubo.cameraPosition), intersect.hitNormal, lightVec, 32);
+			float specular = lightSpecular(vec3(ubo.cameraPosition), intersect.hitNormal, lightVec, 5);
 			vec3 specularColor = specular * vec3(material.specular); 
 		
 			path.color += diffuseColor * ubo.lights[i].color * atten + specularColor;
@@ -792,13 +791,10 @@ void main()
 	int materialId = int(materialIdNormalized * float(ubo.materialCount));
 	vec3 normal = texture(normalsImage, uv).rgb;
 
-	// @todo: for now, store albedo here
-	vec3 diffuseColor = texture(materialIDsImage, uv).rgb;
-
-	// Terminate early if we didn't hit anything!
-	if (diffuseColor.r <= EPSILON && diffuseColor.g <= EPSILON && diffuseColor.b <= EPSILON) {
-		imageStore(resultImage, ivec2(gl_GlobalInvocationID.xy), vec4(0, 0, 0, 1.0));
-		return;	 
+	if (normal == vec3(0, 0, 0)) {
+		// Nothing to compute here
+		imageStore(resultImage, ivec2(gl_GlobalInvocationID.xy), vec4(0));
+		return;
 	}
 
 	PathSegment path;

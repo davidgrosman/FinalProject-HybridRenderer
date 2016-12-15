@@ -675,23 +675,11 @@ void VulkanHybridRenderer::buildDeferredCommandBuffer()
 
 	VkDeviceSize offsets[1] = { 0 };
 
-	//// Background
-	//vkCmdBindDescriptorSets(m_offScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_offscreen, 0, 1, &m_descriptorSets.m_model, 0, NULL);
-	//vkCmdBindVertexBuffers(m_offScreenCmdBuffer, VERTEX_BUFFER_BIND_ID, 1, &m_sceneMeshes.m_floor.meshBuffer.vertices.buf, offsets);
-	//vkCmdBindIndexBuffer(m_offScreenCmdBuffer, m_sceneMeshes.m_floor.meshBuffer.indices.buf, 0, VK_INDEX_TYPE_UINT32);
-	//vkCmdDrawIndexed(m_offScreenCmdBuffer, m_sceneMeshes.m_floor.meshBuffer.indexCount, 3, 0, 0, 0);
-
 	// Object
 	vkCmdBindDescriptorSets(m_offScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_offscreen, 0, 1, &m_descriptorSets.m_model, 0, NULL);
 	vkCmdBindVertexBuffers(m_offScreenCmdBuffer, VERTEX_BUFFER_BIND_ID, 1, &m_sceneMeshes.m_model.meshBuffer.vertices.buf, offsets);
 	vkCmdBindIndexBuffer(m_offScreenCmdBuffer, m_sceneMeshes.m_model.meshBuffer.indices.buf, 0, VK_INDEX_TYPE_UINT32);
 	vkCmdDrawIndexed(m_offScreenCmdBuffer, m_sceneMeshes.m_model.meshBuffer.indexCount, 1, 0, 0, 0);
-
-	// Transparent Object
-	//vkCmdBindDescriptorSets(m_offScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_offscreen, 0, 1, &m_descriptorSets.m_model, 0, NULL);
-	//vkCmdBindVertexBuffers(m_offScreenCmdBuffer, VERTEX_BUFFER_BIND_ID, 1, &m_sceneMeshes.m_transparentObj.meshBuffer.vertices.buf, offsets);
-	//vkCmdBindIndexBuffer(m_offScreenCmdBuffer, m_sceneMeshes.m_transparentObj.meshBuffer.indices.buf, 0, VK_INDEX_TYPE_UINT32);
-	//vkCmdDrawIndexed(m_offScreenCmdBuffer, m_sceneMeshes.m_transparentObj.meshBuffer.indexCount, 1, 0, 0, 0);
 
 	vkCmdEndRenderPass(m_offScreenCmdBuffer);
 
@@ -700,6 +688,12 @@ void VulkanHybridRenderer::buildDeferredCommandBuffer()
 
 void VulkanHybridRenderer::buildRaytracingCommandBuffer() {
 	
+	//VkQueryPoolCreateInfo queryPoolCI = {};
+	//queryPoolCI.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+	//queryPoolCI.queryType = VK_QUERY_TYPE_PIPELINE_STATISTICS;
+	//queryPoolCI.queryCount = 1;
+	//queryPoolCI.pipelineStatistics = ;
+
 	vkGetDeviceQueue(m_device, m_vulkanDevice->queueFamilyIndices.compute, 0, &m_compute.queue);
 
 	m_compute.commandBuffer = VulkanRenderer::createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, false);
@@ -712,6 +706,7 @@ void VulkanHybridRenderer::buildRaytracingCommandBuffer() {
 	vkCmdBindPipeline(m_compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipelines.m_raytrace);
 
 	// Bind descriptor sets
+	//vkCmdWriteTimestamp(m_compute.commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, );
 	vkCmdBindDescriptorSets(m_compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipelineLayouts.m_raytrace, 0, 1, &m_descriptorSets.m_raytrace, 0, nullptr);
 
 	vkCmdDispatch(m_compute.commandBuffer, m_compute.m_storageRaytraceImage.width / 16, m_compute.m_storageRaytraceImage.height / 16, 1);
@@ -922,14 +917,6 @@ void VulkanHybridRenderer::buildCommandBuffers()
 
 void VulkanHybridRenderer::loadMeshes()
 {
-	//{
-	//	vkMeshLoader::MeshCreateInfo meshCreateInfo;
-	//	meshCreateInfo.m_scale = glm::vec3(2.0f);
-	//	meshCreateInfo.m_uvscale = glm::vec2(4.0f);
-	//	meshCreateInfo.m_pos = glm::vec3(0.0f, 1.5f, 0.0f);
-	//	loadMesh(getAssetPath() + "models/plane.obj", &m_sceneMeshes.m_floor.meshBuffer, &m_sceneMeshes.m_floor.meshAttributes, vertexLayout, &meshCreateInfo);
-	//}
-
 	{
 		vkMeshLoader::MeshCreateInfo meshCreateInfo;
 
@@ -937,16 +924,6 @@ void VulkanHybridRenderer::loadMeshes()
 		std::cout << "Number of vertices: " << m_sceneMeshes.m_model.meshAttributes.m_verticePositions.size() << std::endl;
 		std::cout << "Number of triangles: " << m_sceneMeshes.m_model.meshAttributes.m_indices.size() << std::endl;
 	}
-
-	//{
-	//	vkMeshLoader::MeshCreateInfo meshCreateInfo;
-	//	meshCreateInfo.m_scale = glm::vec3(0.3f);
-	//	meshCreateInfo.m_rotAxisAndAngle = glm::vec4(1, 0, 0, 0);
-	//	meshCreateInfo.m_pos = glm::vec3(0.0f, 0.f, 0.0f);
-
-	//	loadMesh(getAssetPath() + "models/gltfs/cornell/cornell.dae", &m_sceneMeshes.m_transparentObj.meshBuffer, &m_sceneMeshes.m_transparentObj.meshAttributes, vertexLayout, &meshCreateInfo);
-	//}
-
 
 	SMaterial temp;
 	temp.m_colorDiffuse = glm::vec4(1, 1, 0, 1);
@@ -1315,7 +1292,7 @@ void VulkanHybridRenderer::setupDescriptorFramework()
 	std::vector<VkDescriptorPoolSize> poolSizes =
 	{
 		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 12),
-		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 15), // Model + floor + out texture
+		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 14),
 		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1),
 		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10),
 	};
@@ -1474,46 +1451,41 @@ void VulkanHybridRenderer::setupDescriptorFramework()
 		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 		VK_SHADER_STAGE_COMPUTE_BIT,
 		1),
-		// Binding 2 : materialIDs storage image
-		vkUtils::initializers::descriptorSetLayoutBinding(
-		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		VK_SHADER_STAGE_COMPUTE_BIT,
-		2),
-		// Binding 3 : result of raytracing image
+		// Binding 2 : result of raytracing image
 		vkUtils::initializers::descriptorSetLayoutBinding(
 		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
 		VK_SHADER_STAGE_COMPUTE_BIT,
+		2),
+		// Binding 3 : triangle indices + materialID of index
+		vkUtils::initializers::descriptorSetLayoutBinding(
+		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		VK_SHADER_STAGE_COMPUTE_BIT,
 		3),
-		// Binding 4 : triangle indices + materialID of index
+		// Binding 4 : triangle positions
 		vkUtils::initializers::descriptorSetLayoutBinding(
 		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 		VK_SHADER_STAGE_COMPUTE_BIT,
 		4),
-		// Binding 5 : triangle positions
+		// Binding 5 : triangle normals
 		vkUtils::initializers::descriptorSetLayoutBinding(
 		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 		VK_SHADER_STAGE_COMPUTE_BIT,
 		5),
-		// Binding 6 : triangle normals
+		// Binding 6 : ubo
 		vkUtils::initializers::descriptorSetLayoutBinding(
-		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 		VK_SHADER_STAGE_COMPUTE_BIT,
 		6),
-		// Binding 7 : ubo
+		// Binding 7 : materials
 		vkUtils::initializers::descriptorSetLayoutBinding(
 		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 		VK_SHADER_STAGE_COMPUTE_BIT,
 		7),
-		// Binding 8 : materials
-		vkUtils::initializers::descriptorSetLayoutBinding(
-		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-		VK_SHADER_STAGE_COMPUTE_BIT,
-		8),
-		// Binding 9 : bvhAabbNodes buffer
+		// Binding 8 : bvhAabbNodes buffer
 		vkUtils::initializers::descriptorSetLayoutBinding(
 		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 		VK_SHADER_STAGE_COMPUTE_BIT,
-		9),
+		8),
 	};
 
 	descriptorLayout =
@@ -1628,31 +1600,6 @@ void VulkanHybridRenderer::setupDescriptors()
 	};
 	vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
 
-	//// Floor
-	//VK_CHECK_RESULT(vkAllocateDescriptorSets(m_device, &allocInfo, &m_descriptorSets.m_floor));
-	//writeDescriptorSets =
-	//{
-	//	// Binding 0: Vertex shader uniform buffer
-	//	vkUtils::initializers::writeDescriptorSet(
-	//	m_descriptorSets.m_floor,
-	//	VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-	//	0,
-	//	&m_uniformData.m_vsOffscreen.descriptor),
-	//	// Binding 1: Color map
-	//	vkUtils::initializers::writeDescriptorSet(
-	//	m_descriptorSets.m_floor,
-	//	VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-	//	1,
-	//	&m_floorTex.m_colorMap.descriptor),
-	//	// Binding 2: Normal map
-	//	vkUtils::initializers::writeDescriptorSet(
-	//	m_descriptorSets.m_floor,
-	//	VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-	//	2,
-	//	&m_floorTex.m_normalMap.descriptor)
-	//};
-	//vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
-
 	// === On screen
 	allocInfo =
 		vkUtils::initializers::descriptorSetAllocateInfo(
@@ -1723,60 +1670,53 @@ void VulkanHybridRenderer::setupDescriptors()
 		1,
 		&texDescriptorNormal
 		),
-		// Binding 2 : MaterialIDs storage image
-		vkUtils::initializers::writeDescriptorSet(
-		m_descriptorSets.m_raytrace,
-		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		2,
-		&texDescriptorAlbedo // @todo: change this to material IDs instead
-		),
-		// Binding 3 : Result of raytracing storage image
+		// Binding 2 : Result of raytracing storage image
 		vkUtils::initializers::writeDescriptorSet(
 		m_descriptorSets.m_raytrace,
 		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-		3,
+		2,
 		&m_compute.m_storageRaytraceImage.descriptor
 		),
-		// Binding 4 : Index buffer
+		// Binding 3 : Index buffer
+		vkUtils::initializers::writeDescriptorSet(
+		m_descriptorSets.m_raytrace,
+		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		3,
+		&m_compute.m_buffers.indicesAndMaterialIDs.descriptor
+		),
+		// Binding 4 : Position buffer
 		vkUtils::initializers::writeDescriptorSet(
 		m_descriptorSets.m_raytrace,
 		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 		4,
-		&m_compute.m_buffers.indicesAndMaterialIDs.descriptor
+		&m_compute.m_buffers.positions.descriptor
 		),
-		// Binding 5 : Position buffer
+		// Binding 5 : Normal buffer
 		vkUtils::initializers::writeDescriptorSet(
 		m_descriptorSets.m_raytrace,
 		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 		5,
-		&m_compute.m_buffers.positions.descriptor
-		),
-		// Binding 6 : Normal buffer
-		vkUtils::initializers::writeDescriptorSet(
-		m_descriptorSets.m_raytrace,
-		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-		6,
 		&m_compute.m_buffers.normals.descriptor
 		),
-		// Binding 7 : UBO
+		// Binding 6 : UBO
+		vkUtils::initializers::writeDescriptorSet(
+		m_descriptorSets.m_raytrace,
+		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		6,
+		&m_compute.m_buffers.ubo.descriptor
+		),
+		// Binding 7 : Materials buffer
 		vkUtils::initializers::writeDescriptorSet(
 		m_descriptorSets.m_raytrace,
 		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 		7,
-		&m_compute.m_buffers.ubo.descriptor
-		),
-		// Binding 8 : Materials buffer
-		vkUtils::initializers::writeDescriptorSet(
-		m_descriptorSets.m_raytrace,
-		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-		8,
 		&m_compute.m_buffers.materials.descriptor
 		),
-		// Binding 9 : bvhAabbNodes buffer
+		// Binding 8 : bvhAabbNodes buffer
 		vkUtils::initializers::writeDescriptorSet(
 		m_descriptorSets.m_raytrace,
 		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-		9,
+		8,
 		&m_compute.m_buffers.bvhAabbNodes.descriptor
 		)
 	};
@@ -1971,7 +1911,7 @@ void VulkanHybridRenderer::updateUniformBufferDeferredLights(SRendererContext& c
 
 void VulkanHybridRenderer::updateUniformBufferRaytracing(SRendererContext& context) {
 	
-	m_compute.ubo.m_cameraPosition = glm::vec4(context.m_camera.m_position, 1);
+	m_compute.ubo.m_cameraPosition = glm::vec4(context.m_camera.m_position, 1);// *glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f);
 	for (int i = 0; i < 6; ++i) {
 		m_compute.ubo.m_lights[i] = m_uboFragmentLights.m_lights[i];
 	}

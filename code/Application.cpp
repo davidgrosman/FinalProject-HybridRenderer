@@ -202,19 +202,23 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 	}
 	else if (action == GLFW_RELEASE)
 	{
-		if (key == GLFW_KEY_F)
+		if (key == GLFW_KEY_F) {
 			pScene->m_context.m_debugDraw = !pScene->m_context.m_debugDraw;
-		else if (key == GLFW_KEY_B)
+		}
+		if (key == GLFW_KEY_G) {
+			pScene->m_context.m_debugBVH = !pScene->m_context.m_debugBVH;
+		}
+		if (key == GLFW_KEY_B)
 			pScene->m_context.m_enableBVH = !pScene->m_context.m_enableBVH;
-		else if (key == GLFW_KEY_Y)
+		if (key == GLFW_KEY_Y)
 			pScene->m_context.m_enableShadows = !pScene->m_context.m_enableShadows;
-		else if (key == GLFW_KEY_T)
+		if (key == GLFW_KEY_T)
 			pScene->m_context.m_enableTransparency = !pScene->m_context.m_enableTransparency;
-		else if (key == GLFW_KEY_R)
+		if (key == GLFW_KEY_R)
 			pScene->m_context.m_enableReflection = !pScene->m_context.m_enableReflection;
-		else if (key == GLFW_KEY_C)
+		if (key == GLFW_KEY_C)
 			pScene->m_context.m_enableColorByRayBounces = !pScene->m_context.m_enableColorByRayBounces;
-		else if (key == GLFW_KEY_L)
+		if (key == GLFW_KEY_L)
 			// Toggle adding light for now
 			pScene->m_context.m_addLight = pScene->m_context.m_addLight == 0 ? 1 : 0;
 	}
