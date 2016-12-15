@@ -18,7 +18,7 @@ Deferred rendering has gained major popularity in real-time rendering. Some of i
 2. There is no direct support for refractive and reflective materials because the G-Buffer can only retain information for one 'layer'.
 3. Shadows are typicaly computed using shadow mapping. This can introduce inaccurate shadows due to aliasing from low resolution shadow maps. Cascaded shadow mapping can mitigate these issues, but requires more memory for each cascaded level.
  
-To combat with the above issues, we implemented a [hybrid raytracer-rasterizer][Practical techniques for ray-tracing in games] program using the explicit graphics API [Vulkan][Vulkan] to accommodate rendering transparent objects for games. This techique is currently being used by the [PowerVR Raytracing GPU family](https://youtu.be/rjvaxcM4g7c) for real time application. Our version is more light-weight and handles lower geometry details. 
+To combat with the above issues, we implemented a [hybrid raytracer-rasterizer](http://www.gdcvault.com/play/1020688/Practical-Techniques-for-Ray-Tracing) program using the explicit graphics API [Vulkan][Vulkan] to accommodate rendering transparent objects for games. This techique is currently being used by the [PowerVR Raytracing GPU family](https://youtu.be/rjvaxcM4g7c) for real time application. Our version is more light-weight and handles lower geometry details. 
 
 The basic concept is to first use rasterization through a deferred-renderer to capture all objects in our scene and then apply a full-screen ray tracing pass by tracing rays initialized from the G-buffer information. 
 
