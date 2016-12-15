@@ -1915,7 +1915,7 @@ void VulkanHybridRenderer::updateUniformBufferRaytracing(SRendererContext& conte
 	for (int i = 0; i < 6; ++i) {
 		m_compute.ubo.m_lights[i] = m_uboFragmentLights.m_lights[i];
 	}
-	m_compute.ubo.m_lightCount = 1 + m_addLight;
+	m_compute.ubo.m_lightCount = 1 + m_addLight * 10;
 	m_compute.ubo.m_materialCount = m_sceneMeshes.m_model.meshAttributes.m_materials.size();
 
 	// Update user flags
