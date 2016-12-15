@@ -9,7 +9,7 @@
 
 ## Overview
 
-![](/docs/images/bear_boxes/gif)
+![](/docs/images/bear_boxes.gif)
 
 Deferred rendering has gained major popularity in real-time rendering. Some of its advantages are the fact that it reduces the rendering algorithm complexity from `O(numLights*numObjects)` to `O(numLights + numObjects)` by rendering a scene in two passes: It first renders the scene geometry into a G-Buffer and then, uses that G-Buffer to calculate the scene lighting in a second pass. It is also easier to maintain since the Lighting stage is entirely disconnected from the Geometry stage. Unfortunately, deferred rendering is not the best solution for all cases:
 
@@ -120,13 +120,15 @@ In order to test our performance we a) varying the number of moving lights, 2) z
 - Image size: 800x800
 - Compute shader work groups: 16x16
 - 5086 triangles and 15258 vertices
+- 7 materials: 3 refractive surfaces and 4 diffuse surfaces
+- 3 refractive spheres and 7 diffuse objects
 - Tested on Microsoft Windows 10 Home, Microsoft Visual Studio 2015, target x64, i7-4790 CPU @ 3.60GHz 12GB, GTX 980 Ti
 
 **1. Far scene.** Camera is at -30.0f Z unit away
 
 | Scene | Analysis |
 | --- | ---|
-|![](/docs/images/testscene_bear_far.png| ![](/docs/analysis/zoomed_out_bear_boxes.png)|
+|![](/docs/images/testscene_bear_far.png)| ![](/docs/analysis/zoomed_out_bear_boxes.png)|
 
 - Refraction: Interestingly, refraction doesn't seem to be affected. We were able to maintain the same frame rate through out.
 - Shadow: this effect does get hit big. We tanked right away as soon as shadow is turned on, dropped below ~15 FPS. With the aid of BVH, we were able to gain back ~10 FPS. Acceleration data structure choice and configuration plays an important role here. This showcase that our renderer isn't quite ready for real-time application yet.
