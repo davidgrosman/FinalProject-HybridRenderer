@@ -1,20 +1,21 @@
 # Final Project: Hybrid Ray-Raster Renderer in Vulkan
 ===============
 
+![](/docs/images/bear_boxes.gif)
+
+
 # Team members
 - **Names:** Trung Le and David Grosman.
 - **Tested on:** 
  * Microsoft Windows 10 Home, i7-4790 CPU @ 3.60GHz 12GB, GTX 980 Ti (Person desktop).
  * Microsoft Windows  7 Professional, i7-5600U @ 2.6GHz, 256GB, GeForce 840M (Personal laptop).
 
-# Overview
-
-![](/docs/images/bear_boxes.gif)
-
-# Video demo (click on image)
+### Video demo (click on image)
 
 <a href="https://www.youtube.com/embed/LI-4krLiWOo" target="_blank"><img src="http://img.youtube.com/vi/LI-4krLiWOo/0.jpg" 
-alt="Hybrid ray-raster" width="560" height="315" border="10" /></a>
+alt="Hybrid ray-raster" width="560" height="415" border="1" /></a>
+
+# Overview
 
 Deferred rendering has gained major popularity in real-time rendering. Some of its advantages are the fact that it reduces the rendering algorithm complexity from `O(numLights*numObjects)` to `O(numLights + numObjects)` by rendering a scene in two passes: It first renders the scene geometry into a G-Buffer and then, uses that G-Buffer to calculate the scene lighting in a second pass. It is also easier to maintain since the Lighting stage is entirely disconnected from the Geometry stage. Unfortunately, deferred rendering is not the best solution for all cases:
 
