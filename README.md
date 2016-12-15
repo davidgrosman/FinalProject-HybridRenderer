@@ -88,6 +88,7 @@ We only computed shadows for ground-level surfaces to avoid unnecessarily checki
 _This debugging tool can be enabled by hitting 'F' key_
 
 ![](/docs/images/testscene_bear_far_gbuffer.png)
+From top-left, to bottom-right: Position, World Normal, Albedo G-Buffers and Final Image.
 
 
 **2. BVH visualization**
