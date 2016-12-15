@@ -1911,7 +1911,7 @@ void VulkanHybridRenderer::updateUniformBufferDeferredLights(SRendererContext& c
 {
 	static float timer = 0.0f;
 	timer += 0.005f;
-	float SPEED = 36.0f;
+	float SPEED = 360.0f;
 
 	// White
 	m_uboFragmentLights.m_lights[0].position = glm::vec4(0.0f, -2.0f, 0.0f, 1.0f);

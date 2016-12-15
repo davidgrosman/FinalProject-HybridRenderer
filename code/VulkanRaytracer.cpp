@@ -601,7 +601,7 @@ void VulkanRaytracer::loadMeshes()
 
 		loadMesh(getAssetPath() + m_fileName, nullptr, &m_sceneAttributes, vertexLayout, &meshCreateInfo);
 		std::cout << "Number of vertices: " << m_sceneAttributes.m_verticePositions.size() << std::endl;
-		std::cout << "Number of triangles: " << m_sceneAttributes.m_verticePositions.size() / 3 << std::endl;
+		std::cout << "Number of triangles: " << m_sceneAttributes.m_indices.size()  << std::endl;
 	}
 }
 

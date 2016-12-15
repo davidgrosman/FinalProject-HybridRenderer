@@ -109,6 +109,22 @@ void CApplication::Run() {
 		static auto start = std::chrono::system_clock::now();
 		auto now = std::chrono::system_clock::now();
 		int64_t timeElapsedInMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
+
+		// Capped frame rate at 60fps
+		static double target_frame_rate = 60;
+		static double frame_start = 0;
+		double wait_time = 1.0 / (target_frame_rate);
+		double curr_frame_time = glfwGetTime() - frame_start;
+		double dur = 1000.0 * (wait_time - curr_frame_time) + 0.5;
+		int durDW = (int)dur;
+		if (durDW > 0) // ensures that we don't have a dur > 0.0 which converts to a durDW of 0.
+		{
+			Sleep((DWORD)durDW);
+		}
+
+		double frame_end = glfwGetTime();
+		frame_start = frame_end;
+
 		if (timeElapsedInMs >= 1000)
 		{
 			m_fps = (int) ( m_fpstracker / (timeElapsedInMs / 1000) );
@@ -142,13 +158,13 @@ CSceneRenderApp::CSceneRenderApp(int width, int height/*, const std::string& sce
 {
 	Camera& cam = m_context.m_camera;
 	{
-		cam.m_position = {0.f, 2.5f, -10.f };
-		cam.setRotation(glm::vec3(0.f, 0.f, 0.0f));
-		cam.setPerspective(60.0f, width / (float)height, 0.1f, 1000.0f);
+		cam.m_position = {0.f, 15.f, -25.f };
+		cam.setRotation(glm::vec3(-15.f, 0.f, 0.0f));
+		cam.setPerspective(60.0f, width / (float)height, 0.1f, 100.0f);
 	}
 	m_context.m_window = m_window;
 
-	const std::string fileName = "models/box/boxes_transparent.dae";
+	const std::string fileName = "models/box/boxes.dae";
 	m_renderer = new VulkanHybridRenderer(fileName);
 	m_renderer->initVulkan(m_context, true);
 	m_title = m_renderer->m_appName;

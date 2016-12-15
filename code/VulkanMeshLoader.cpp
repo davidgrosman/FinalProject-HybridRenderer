@@ -294,6 +294,9 @@ bool VulkanMeshLoader::LoadMesh(const std::string& filename, int flags)
 			}
 
 			m_sceneAttributes.m_materials.resize(pScene->mNumMaterials);
+
+			float ri[4] = { 1.1, 1.6, 2.0, 2.5 };
+			int rii = 0;
 			for (auto m = 0; m < pScene->mNumMaterials; ++m) {
 				// Add to materials list
 				SMaterial material;
@@ -314,7 +317,8 @@ bool VulkanMeshLoader::LoadMesh(const std::string& filename, int flags)
 				pScene->mMaterials[m]->Get(AI_MATKEY_REFLECTIVITY, material.m_reflectivity);
 				pScene->mMaterials[m]->Get(AI_MATKEY_REFRACTI, material.m_refracti);
 				if (material.m_colorTransparent.x > 0.0) {
-					material.m_refracti = 1.60;
+					material.m_refracti = ri[rii++];
+					rii %= 4;
 				}
 				pScene->mMaterials[m]->Get(AI_MATKEY_SHININESS_STRENGTH, material.m_shininess);
 
