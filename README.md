@@ -82,31 +82,31 @@ We only computed shadows for ground-level surfaces to avoid unnecessarily checki
 
 # Debugging tools
 
-1. Deferred shading layers
+**1. Deferred shading layers**
 
 _This debugging tool can be enabled by hitting 'F' key_
 
 ![](/docs/images/testscene_bear_far_gbuffer.png)
 
 
-2. BVH visualization
+**2. BVH visualization**
 
 _This debugging tool can be enabled by hitting 'G' key_
 
 ![](/docs/images/bvh_01.png)
 
 
-3. Color by ray bounces
+**3. Color by ray bounces**
 
 _This debugging tool can be enabled by hitting 'C' key_
 
 ![](/docs/images/testscene_bear_far_color_by_ray_bounces.png)
 
-4. Toggleable effects
-
-All effects in our renderer can be toggled on and off using the following keys:
+**4. Toggleable effects**
 
 ![](/docs/images/testscene_bear_far_reflection.png)
+
+All effects in our renderer can be toggled on and off using the following keys:
 
 - 'F': toggle G-buffer viewing
 - 'G': toggle BVH visualization
