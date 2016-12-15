@@ -301,14 +301,7 @@ void VulkanHybridRenderer::setupOnscreenPipeline() {
 		m_renderPass,
 		0);
 
-	VkPipelineVertexInputStateCreateInfo emptyInputState{};
-	emptyInputState.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	emptyInputState.vertexAttributeDescriptionCount = 0;
-	emptyInputState.pVertexAttributeDescriptions = nullptr;
-	emptyInputState.vertexBindingDescriptionCount = 0;
-	emptyInputState.pVertexBindingDescriptions = nullptr;
-	pipelineCreateInfo.pVertexInputState = &emptyInputState;
-
+	pipelineCreateInfo.pVertexInputState = &m_vertices.m_inputState;
 	pipelineCreateInfo.pInputAssemblyState = &inputAssemblyState;
 	pipelineCreateInfo.pRasterizationState = &rasterizationState;
 	pipelineCreateInfo.pColorBlendState = &colorBlendState;
@@ -880,40 +873,40 @@ void VulkanHybridRenderer::buildCommandBuffers()
 		vkCmdSetScissor(m_drawCmdBuffers[i], 0, 1, &scissor);
 
 		VkDeviceSize offsets[1] = { 0 };
+		if (m_debugDisplay && !m_enableBVH)
+		{
+			// -- Draw deferred debug layer
 
+			vkCmdBindPipeline(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.m_debug);
+			vkCmdBindDescriptorSets(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_debug, 0, 1, &m_descriptorSets.m_debug, 0, NULL);
+			vkCmdBindVertexBuffers(m_drawCmdBuffers[i], VERTEX_BUFFER_BIND_ID, 1, &m_sceneMeshes.m_quad.vertices.buf, offsets);
+			vkCmdBindIndexBuffer(m_drawCmdBuffers[i], m_sceneMeshes.m_quad.indices.buf, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(m_drawCmdBuffers[i], m_sceneMeshes.m_quad.indexCount, 1, 0, 0, 1);
+			// Move viewport to display final composition in lower right corner
+			viewport.x = viewport.width * 0.5f;
+			viewport.y = viewport.height * 0.5f;
+			vkCmdSetViewport(m_drawCmdBuffers[i], 0, 1, &viewport);
+		}
 
 		// Final composition as full screen quad
+
 		vkCmdBindPipeline(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.m_onscreen);
-
 		vkCmdBindDescriptorSets(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_onscreen, 0, 1, &m_descriptorSets.m_onscreen, 0, NULL);
+		vkCmdBindVertexBuffers(m_drawCmdBuffers[i], VERTEX_BUFFER_BIND_ID, 1, &m_sceneMeshes.m_quad.vertices.buf, offsets);
+		vkCmdBindIndexBuffer(m_drawCmdBuffers[i], m_sceneMeshes.m_quad.indices.buf, 0, VK_INDEX_TYPE_UINT32);
+		vkCmdDrawIndexed(m_drawCmdBuffers[i], 6, 1, 0, 0, 1);
 
-
-		vkCmdDraw(m_drawCmdBuffers[i], 3, 1, 0, 0);
-
-		if (m_debugDisplay)
-		{
-			vkCmdBindDescriptorSets(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_debug, 0, 1, &m_descriptorSets.m_debug, 0, NULL);
-
-			//vkCmdBindPipeline(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.m_debug);
-			//vkCmdBindVertexBuffers(m_drawCmdBuffers[i], VERTEX_BUFFER_BIND_ID, 1, &m_sceneMeshes.m_quad.vertices.buf, offsets);
-			//vkCmdBindIndexBuffer(m_drawCmdBuffers[i], m_sceneMeshes.m_quad.indices.buf, 0, VK_INDEX_TYPE_UINT32);
-			//vkCmdDrawIndexed(m_drawCmdBuffers[i], m_sceneMeshes.m_quad.indexCount, 1, 0, 0, 1);
-			//// Move viewport to display final composition in lower right corner
-			//viewport.x = viewport.width * 0.5f;
-			//viewport.y = viewport.height * 0.5f;
-			//vkCmdSetViewport(m_drawCmdBuffers[i], 0, 1, &viewport);
+		if (m_debugDisplay && m_enableBVH) {
 
 			// -- Draw BVH tree
+			
 			vkCmdBindPipeline(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.m_wireframe);
 
 			vkCmdBindDescriptorSets(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_wireframe, 0, 1, &m_descriptorSets.m_wireframe, 0, NULL);
 
-			// Create buffer
-
 			vkCmdBindVertexBuffers(m_drawCmdBuffers[i], VERTEX_BUFFER_BIND_ID, 1, &m_sceneMeshes.m_bbox.vertices.buf, offsets);
 			vkCmdBindIndexBuffer(m_drawCmdBuffers[i], m_sceneMeshes.m_bbox.indices.buf, 0, VK_INDEX_TYPE_UINT16);
 			vkCmdDrawIndexed(m_drawCmdBuffers[i], m_sceneMeshes.m_bbox.indexCount, 1, 0, 0, 1);
-
 		}
 
 		vkCmdEndRenderPass(m_drawCmdBuffers[i]);
@@ -1265,6 +1258,7 @@ void VulkanHybridRenderer::generateQuads()
 		float col[3];
 		float normal[3];
 		float tangent[3];
+		float materialId;
 	};
 
 	std::vector<Vertex> vertexBuffer;
@@ -1274,10 +1268,10 @@ void VulkanHybridRenderer::generateQuads()
 	for (uint32_t i = 0; i < 3; i++)
 	{
 		// Last component of normal is used for debug display sampler index
-		vertexBuffer.push_back({ { x + 1.0f, y + 1.0f, 0.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, (float)i } });
-		vertexBuffer.push_back({ { x, y + 1.0f, 0.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, (float)i } });
-		vertexBuffer.push_back({ { x, y, 0.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, (float)i } });
-		vertexBuffer.push_back({ { x + 1.0f, y, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, (float)i } });
+		vertexBuffer.push_back({ { x + 1.0f, y + 1.0f, 0.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, (float)i }, 0 });
+		vertexBuffer.push_back({ { x, y + 1.0f, 0.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, (float)i }, 0 });
+		vertexBuffer.push_back({ { x, y, 0.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, (float)i }, 0 });
+		vertexBuffer.push_back({ { x + 1.0f, y, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, (float)i }, 0 });
 		x += 1.0f;
 		if (x > 1.0f)
 		{
@@ -1318,7 +1312,7 @@ void VulkanHybridRenderer::setupDescriptorFramework()
 	// Set-up descriptor pool
 	std::vector<VkDescriptorPoolSize> poolSizes =
 	{
-		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 11),
+		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 12),
 		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 15), // Model + floor + out texture
 		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1),
 		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10),
@@ -1415,11 +1409,16 @@ void VulkanHybridRenderer::setupDescriptorFramework()
 	// === Onscreen set layout
 	setLayoutBindings =
 	{
-		// Binding 0 : Color sampler
+		// Binding 0 : UBO
+		vkUtils::initializers::descriptorSetLayoutBinding(
+		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		VK_SHADER_STAGE_VERTEX_BIT,
+		0),
+		// Binding 1 : sampler
 		vkUtils::initializers::descriptorSetLayoutBinding(
 		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 		VK_SHADER_STAGE_FRAGMENT_BIT,
-		0),
+		1),
 	};
 
 	descriptorLayout =
@@ -1663,11 +1662,17 @@ void VulkanHybridRenderer::setupDescriptors()
 	
 	writeDescriptorSets =
 	{
-		// Binding 0: Fragment shader color sampler for output
+		// Binding 0: UBO
+		vkUtils::initializers::writeDescriptorSet(
+		m_descriptorSets.m_onscreen,
+		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		0,
+		&m_uniformData.m_vsFullScreen.descriptor),
+		// Binding 1: Fragment shader color sampler for output
 		vkUtils::initializers::writeDescriptorSet(
 		m_descriptorSets.m_onscreen,
 		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		0,
+		1,
 		&m_compute.m_storageRaytraceImage.descriptor),
 	};
 	vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
