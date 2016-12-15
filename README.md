@@ -10,7 +10,7 @@
  * Microsoft Windows 10 Home, i7-4790 CPU @ 3.60GHz 12GB, GTX 980 Ti (Desktop).
  * Microsoft Windows  7 Professional, i7-5600U @ 2.6GHz, 256GB, GeForce 840M (Laptop).
 
-### Video demo (click on image)
+### Video demo (click on image) and [Presentation](https://docs.google.com/presentation/d/1Am7_PH8csx87xi8OX_wCySGsZiqS8YksmKGhxwrubdI/edit#slide=id.p)
 
 <a href="https://www.youtube.com/embed/LI-4krLiWOo" target="_blank"><img src="http://img.youtube.com/vi/LI-4krLiWOo/0.jpg" 
 alt="Hybrid ray-raster" width="560" height="415" border="1" /></a>
@@ -159,7 +159,7 @@ We varied the dimension of the compute shader invocations, but that didn't affec
 
 # Final thoughts
 
-The project had a great deal of software engineering in term of developing a Vulkan graphics engine and team collaboration. It was also a great opportunity for us to explore the possibility of using raytracing in real-time application. Eventhough we were not able to achieve the frame-rate compare to PowerVR raytracing demo, we gained a great deal of experience.
+The project had a great deal of software engineering in term of developing a Vulkan graphics engine and team collaboration. It was also a great opportunity for us to explore the possibility of using raytracing in real-time application. Even though we were not able to achieve a similar frame-rate as PowerVR raytracing demo, we gained a great deal of experience.
 
 # Gallery
 
