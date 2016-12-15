@@ -199,16 +199,10 @@ We would like to thank:
 
  
 # References
-* [Practical techniques for ray-tracing in games][Practical techniques for ray-tracing in games]
 * [GDCVault14: Practical techniques for ray-tracing in games](http://www.gdcvault.com/play/1020688/Practical-Techniques-for-Ray-Tracing)
-* [Vulkan, Industry Forged] [Vulkan] 
+* [Vulkan, Industry Forged] (https://www.khronos.org/vulkan/)
+* [Practical techniques for ray-tracing in games](http://www.gamasutra.com/blogs/AlexandruVoica/20140318/213148/Practical_techniques_for_ray_tracing_in_games.php)
+* [Imagination PowerVR 6XT GR6500 mobile GPU - Ray Tracing demos vs Nvidia Geforce GTX 980 Ti](https://youtu.be/ND96G9UZxxA)
 * [Asynchronous Compute in DX12 & Vulkan: Dispelling Myths & Misconceptions Concurrently](https://youtu.be/XOGIDMJThto)
 * [Doom benchmarks return: Vulkan vs. OpenGL](http://www.pcgamer.com/doom-benchmarks-return-vulkan-vs-opengl/2/)
 * [Rise of the Tomb Raider async compute update boosts performance on AMD hardware](https://www.extremetech.com/gaming/231481-rise-of-the-tomb-raider-async-compute-update-improves-performance-on-amd-hardware-flat-on-maxwell)
-* [Imagination PowerVR 6XT GR6500 mobile GPU - Ray Tracing demos vs Nvidia Geforce GTX 980 Ti](https://youtu.be/ND96G9UZxxA)
-
-
-
-[Practical techniques for ray-tracing in games]: http://www.gamasutra.com/blogs/AlexandruVoica/20140318/213148/Practical_techniques_for_ray_tracing_in_games.php
-
-[Vulkan]: https://www.khronos.org/vulkan/
