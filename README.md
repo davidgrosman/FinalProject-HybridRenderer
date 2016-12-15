@@ -5,7 +5,7 @@
 
 
 # Team members
-- **Names:** Trung Le and David Grosman.
+- **Names:** Trung Le ([website](http://www.trungtuanle.com/)) and David Grosman.
 - **Tested on:** 
  * Microsoft Windows 10 Home, i7-4790 CPU @ 3.60GHz 12GB, GTX 980 Ti (Person desktop).
  * Microsoft Windows  7 Professional, i7-5600U @ 2.6GHz, 256GB, GeForce 840M (Personal laptop).
