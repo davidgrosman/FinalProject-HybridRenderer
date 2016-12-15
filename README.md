@@ -1,6 +1,6 @@
 # University of Pennsylvania, CIS 565: GPU Programming and Architecture.
 ## Final Project: Hybrid Ray-Raster Renderer in Vulkan
-# by Trung Le ([website](http://www.trungtuanle.com/)) and David Grosman.
+### by Trung Le ([website](http://www.trungtuanle.com/)) and David Grosman.
 ===============
 
 ![](/docs/images/bear_boxes.gif)
