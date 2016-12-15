@@ -762,7 +762,7 @@ namespace vk
 			deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 			deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());;
 			deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
-			//deviceCreateInfo.pEnabledFeatures = &enabledFeatures;
+			deviceCreateInfo.pEnabledFeatures = &enabledFeatures;
 
 			// Enable the debug marker extension if it is present (likely meaning a debugging tool is present)
 			if (vkUtils::checkDeviceExtensionPresent(physicalDevice, VK_EXT_DEBUG_MARKER_EXTENSION_NAME))

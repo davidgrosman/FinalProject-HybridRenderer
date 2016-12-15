@@ -121,30 +121,34 @@ void VulkanHybridRenderer::shutdownVulkan()
 	vkDestroyPipeline(m_device, m_pipelines.m_offscreen, nullptr);
 	vkDestroyPipeline(m_device, m_pipelines.m_debug, nullptr);
 	vkDestroyPipeline(m_device, m_pipelines.m_raytrace, nullptr);
+	vkDestroyPipeline(m_device, m_pipelines.m_wireframe, nullptr);
 
 	vkDestroyPipelineLayout(m_device, m_pipelineLayouts.m_onscreen, nullptr);
 	vkDestroyPipelineLayout(m_device, m_pipelineLayouts.m_offscreen, nullptr);
 	vkDestroyPipelineLayout(m_device, m_pipelineLayouts.m_debug, nullptr);
 	vkDestroyPipelineLayout(m_device, m_pipelineLayouts.m_raytrace, nullptr);
+	vkDestroyPipelineLayout(m_device, m_pipelineLayouts.m_wireframe, nullptr);
 
 	vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.m_onscreen, nullptr);
 	vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.m_offscreen, nullptr);
 	vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.m_debug, nullptr);
 	vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.m_raytrace, nullptr);
+	vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayouts.m_wireframe, nullptr);
 
 	// Meshes
 	VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_model.meshBuffer);
 	//VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_floor.meshBuffer);
 	VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_quad);
 	//VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_transparentObj.meshBuffer);
+	VulkanMeshLoader::destroyBuffers(m_device, &m_sceneMeshes.m_bbox);
 
 	// Uniform buffers
 	vkUtils::destroyUniformData(m_device, &m_uniformData.m_vsOffscreen);
 	vkUtils::destroyUniformData(m_device, &m_uniformData.m_vsFullScreen);
 	vkUtils::destroyUniformData(m_device, &m_uniformData.m_fsLights);
+	vkUtils::destroyUniformData(m_device, &m_uniformData.m_wireframe);
 	vkUtils::destroyUniformData(m_device, &m_compute.m_buffers.materials);
 	vkUtils::destroyUniformData(m_device, &m_compute.m_buffers.ubo);
-
 	
 	vkDestroyBuffer(m_device, m_compute.m_buffers.indicesAndMaterialIDs.buffer, nullptr);
 	vkDestroyBuffer(m_device, m_compute.m_buffers.positions.buffer, nullptr);
@@ -317,6 +321,47 @@ void VulkanHybridRenderer::setupOnscreenPipeline() {
 	pipelineCreateInfo.renderPass = m_renderPass;
 
 	VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_device, m_pipelineCache, 1, &pipelineCreateInfo, nullptr, &m_pipelines.m_onscreen));
+
+	// === For BVH wireframe debug
+	inputAssemblyState =
+		vkUtils::initializers::pipelineInputAssemblyStateCreateInfo(
+		VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
+		0,
+		VK_FALSE);
+
+	rasterizationState =
+		vkUtils::initializers::pipelineRasterizationStateCreateInfo(
+		VK_POLYGON_MODE_LINE,
+		VK_CULL_MODE_NONE,
+		VK_FRONT_FACE_COUNTER_CLOCKWISE,
+		0);
+
+	shaderStages[0] = loadShader(getAssetPath() + "shaders/hybrid/wireframe.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	shaderStages[1] = loadShader(getAssetPath() + "shaders/hybrid/wireframe.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+
+	VkPipelineVertexInputStateCreateInfo wireframeInputState = vkUtils::initializers::pipelineVertexInputStateCreateInfo();;
+	
+	VkVertexInputBindingDescription binding = vkUtils::initializers::vertexInputBindingDescription(
+		VERTEX_BUFFER_BIND_ID,
+		sizeof(glm::vec3),
+		VK_VERTEX_INPUT_RATE_VERTEX);
+	VkVertexInputAttributeDescription attributeDesc = vkUtils::initializers::vertexInputAttributeDescription(
+		VERTEX_BUFFER_BIND_ID,
+		0,
+		VK_FORMAT_R32G32B32_SFLOAT,
+		0);;
+	wireframeInputState.vertexAttributeDescriptionCount = 1;
+	wireframeInputState.pVertexAttributeDescriptions = &attributeDesc;
+	wireframeInputState.vertexBindingDescriptionCount = 1;
+	wireframeInputState.pVertexBindingDescriptions = &binding;
+	
+	pipelineCreateInfo.pVertexInputState = &wireframeInputState;
+	pipelineCreateInfo.pInputAssemblyState = &inputAssemblyState;
+	pipelineCreateInfo.pRasterizationState = &rasterizationState;
+	pipelineCreateInfo.pStages = shaderStages.data();
+	pipelineCreateInfo.layout = m_pipelineLayouts.m_wireframe;
+
+	VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_device, m_pipelineCache, 1, &pipelineCreateInfo, nullptr, &m_pipelines.m_wireframe));
 }
 
 void VulkanHybridRenderer::setupDeferredPipeline() {
@@ -835,19 +880,7 @@ void VulkanHybridRenderer::buildCommandBuffers()
 		vkCmdSetScissor(m_drawCmdBuffers[i], 0, 1, &scissor);
 
 		VkDeviceSize offsets[1] = { 0 };
-		vkCmdBindDescriptorSets(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_debug, 0, 1, &m_descriptorSets.m_debug, 0, NULL);
 
-		if (m_debugDisplay)
-		{
-			vkCmdBindPipeline(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.m_debug);
-			vkCmdBindVertexBuffers(m_drawCmdBuffers[i], VERTEX_BUFFER_BIND_ID, 1, &m_sceneMeshes.m_quad.vertices.buf, offsets);
-			vkCmdBindIndexBuffer(m_drawCmdBuffers[i], m_sceneMeshes.m_quad.indices.buf, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(m_drawCmdBuffers[i], m_sceneMeshes.m_quad.indexCount, 1, 0, 0, 1);
-			// Move viewport to display final composition in lower right corner
-			viewport.x = viewport.width * 0.5f;
-			viewport.y = viewport.height * 0.5f;
-			vkCmdSetViewport(m_drawCmdBuffers[i], 0, 1, &viewport);
-		}
 
 		// Final composition as full screen quad
 		vkCmdBindPipeline(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.m_onscreen);
@@ -856,6 +889,32 @@ void VulkanHybridRenderer::buildCommandBuffers()
 
 
 		vkCmdDraw(m_drawCmdBuffers[i], 3, 1, 0, 0);
+
+		if (m_debugDisplay)
+		{
+			vkCmdBindDescriptorSets(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_debug, 0, 1, &m_descriptorSets.m_debug, 0, NULL);
+
+			//vkCmdBindPipeline(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.m_debug);
+			//vkCmdBindVertexBuffers(m_drawCmdBuffers[i], VERTEX_BUFFER_BIND_ID, 1, &m_sceneMeshes.m_quad.vertices.buf, offsets);
+			//vkCmdBindIndexBuffer(m_drawCmdBuffers[i], m_sceneMeshes.m_quad.indices.buf, 0, VK_INDEX_TYPE_UINT32);
+			//vkCmdDrawIndexed(m_drawCmdBuffers[i], m_sceneMeshes.m_quad.indexCount, 1, 0, 0, 1);
+			//// Move viewport to display final composition in lower right corner
+			//viewport.x = viewport.width * 0.5f;
+			//viewport.y = viewport.height * 0.5f;
+			//vkCmdSetViewport(m_drawCmdBuffers[i], 0, 1, &viewport);
+
+			// -- Draw BVH tree
+			vkCmdBindPipeline(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines.m_wireframe);
+
+			vkCmdBindDescriptorSets(m_drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayouts.m_wireframe, 0, 1, &m_descriptorSets.m_wireframe, 0, NULL);
+
+			// Create buffer
+
+			vkCmdBindVertexBuffers(m_drawCmdBuffers[i], VERTEX_BUFFER_BIND_ID, 1, &m_sceneMeshes.m_bbox.vertices.buf, offsets);
+			vkCmdBindIndexBuffer(m_drawCmdBuffers[i], m_sceneMeshes.m_bbox.indices.buf, 0, VK_INDEX_TYPE_UINT16);
+			vkCmdDrawIndexed(m_drawCmdBuffers[i], m_sceneMeshes.m_bbox.indexCount, 1, 0, 0, 1);
+
+		}
 
 		vkCmdEndRenderPass(m_drawCmdBuffers[i]);
 
@@ -881,7 +940,7 @@ void VulkanHybridRenderer::loadMeshes()
 
 		loadMesh(getAssetPath() + m_fileName, &m_sceneMeshes.m_model.meshBuffer, &m_sceneMeshes.m_model.meshAttributes, vertexLayout, &meshCreateInfo, &m_bvhTree);
 		std::cout << "Number of vertices: " << m_sceneMeshes.m_model.meshAttributes.m_verticePositions.size() << std::endl;
-		std::cout << "Number of triangles: " << m_sceneMeshes.m_model.meshAttributes.m_verticePositions.size() / 3 << std::endl;
+		std::cout << "Number of triangles: " << m_sceneMeshes.m_model.meshAttributes.m_indices.size() << std::endl;
 	}
 
 	//{
@@ -957,7 +1016,7 @@ void VulkanHybridRenderer::loadMeshes()
 	m_vertices.m_inputState.vertexAttributeDescriptionCount = static_cast<uint32_t>(m_vertices.m_attributeDescriptions.size());
 	m_vertices.m_inputState.pVertexAttributeDescriptions = m_vertices.m_attributeDescriptions.data();
 
-	// ==== @todo Parse meshes into triangle soups from glTF
+	// ==== COMPUTE SHADER
 
 	// Get a queue from the device for copy operation
 	vkGetDeviceQueue(m_device, m_vulkanDevice->queueFamilyIndices.compute, 0, &m_compute.queue);
@@ -1109,6 +1168,93 @@ void VulkanHybridRenderer::loadMeshes()
 	vkFreeMemory(m_device, stagingBuffer.memory, nullptr);
 }
 
+glm::vec3 Centroid(
+	const glm::vec3& a,
+	const glm::vec3& b
+	)
+{
+	return glm::vec3(
+		(a.x + b.x) / 2.0f,
+		(a.y + b.y) / 2.0f,
+		(a.z + b.z) / 2.0f
+		);
+}
+
+void VulkanHybridRenderer::generateWireframeBVHNodes() {
+
+	std::vector<glm::vec3> vertexBuffer;
+	std::vector<uint16_t> bbox_idx;
+
+	size_t verticeCount = 0;
+	for (auto node : m_bvhTree.m_aabbNodes) {
+
+		if (node.m_minAABB.w == 0 || node.m_maxAABB.w == 0) {
+			continue;
+		}
+
+		// Setup vertices
+		glm::vec3 centroid = Centroid(glm::vec3(node.m_minAABB), glm::vec3(node.m_maxAABB));
+		glm::vec3 translation = centroid;
+		glm::vec3 scale = glm::vec3(glm::vec3(node.m_maxAABB) - glm::vec3(node.m_minAABB));
+		glm::mat4 transform = glm::translate(translation) * glm::scale(scale);
+		
+		vertexBuffer.push_back(glm::vec3(transform * glm::vec4(.5f, .5f, .5f, 1)));
+		vertexBuffer.push_back(glm::vec3(transform * glm::vec4(.5f, .5f, -.5f, 1)));
+		vertexBuffer.push_back(glm::vec3(transform * glm::vec4(.5f, -.5f, .5f, 1)));
+		vertexBuffer.push_back(glm::vec3(transform * glm::vec4(.5f, -.5f, -.5f, 1)));
+		vertexBuffer.push_back(glm::vec3(transform * glm::vec4(-.5f, .5f, .5f, 1)));
+		vertexBuffer.push_back(glm::vec3(transform * glm::vec4(-.5f, .5f, -.5f, 1)));
+		vertexBuffer.push_back(glm::vec3(transform * glm::vec4(-.5f, -.5f, .5f, 1)));
+		vertexBuffer.push_back(glm::vec3(transform * glm::vec4(-.5f, -.5f, -.5f, 1)));
+
+		// Setup indices
+
+		bbox_idx.push_back(0 + verticeCount);
+		bbox_idx.push_back(1 + verticeCount);
+		bbox_idx.push_back(1 + verticeCount);
+		bbox_idx.push_back(3 + verticeCount);
+		bbox_idx.push_back(3 + verticeCount);
+		bbox_idx.push_back(2 + verticeCount);
+		bbox_idx.push_back(2 + verticeCount);
+		bbox_idx.push_back(0 + verticeCount);
+		bbox_idx.push_back(0 + verticeCount);
+		bbox_idx.push_back(4 + verticeCount);
+		bbox_idx.push_back(4 + verticeCount);
+		bbox_idx.push_back(6 + verticeCount);
+		bbox_idx.push_back(6 + verticeCount);
+		bbox_idx.push_back(2 + verticeCount);
+		bbox_idx.push_back(3 + verticeCount);
+		bbox_idx.push_back(7 + verticeCount);
+		bbox_idx.push_back(7 + verticeCount);
+		bbox_idx.push_back(6 + verticeCount);
+		bbox_idx.push_back(1 + verticeCount);
+		bbox_idx.push_back(5 + verticeCount);
+		bbox_idx.push_back(5 + verticeCount);
+		bbox_idx.push_back(4 + verticeCount);
+		bbox_idx.push_back(5 + verticeCount);
+		bbox_idx.push_back(7 + verticeCount);
+
+		verticeCount += 8;
+
+	}
+
+	createBuffer(
+		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+		vertexBuffer.size() * sizeof(glm::vec3),
+		vertexBuffer.data(),
+		&m_sceneMeshes.m_bbox.vertices.buf,
+		&m_sceneMeshes.m_bbox.vertices.mem);
+
+	m_sceneMeshes.m_bbox.indexCount = static_cast<uint32_t>(bbox_idx.size());
+
+	createBuffer(
+		VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+		bbox_idx.size() * sizeof(uint16_t),
+		bbox_idx.data(),
+		&m_sceneMeshes.m_bbox.indices.buf,
+		&m_sceneMeshes.m_bbox.indices.mem);
+}
+
 void VulkanHybridRenderer::generateQuads()
 {
 	// Setup vertices for multiple screen aligned quads
@@ -1172,7 +1318,7 @@ void VulkanHybridRenderer::setupDescriptorFramework()
 	// Set-up descriptor pool
 	std::vector<VkDescriptorPoolSize> poolSizes =
 	{
-		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10),
+		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 11),
 		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 15), // Model + floor + out texture
 		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1),
 		vkUtils::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10),
@@ -1289,6 +1435,30 @@ void VulkanHybridRenderer::setupDescriptorFramework()
 		1);
 
 	VK_CHECK_RESULT(vkCreatePipelineLayout(m_device, &pPipelineLayoutCreateInfo, nullptr, &m_pipelineLayouts.m_onscreen));
+
+	// === Wireframe set layout
+	setLayoutBindings =
+	{
+		// Binding 0 : UBO
+		vkUtils::initializers::descriptorSetLayoutBinding(
+		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		VK_SHADER_STAGE_VERTEX_BIT,
+		0),
+	};
+
+	descriptorLayout =
+		vkUtils::initializers::descriptorSetLayoutCreateInfo(
+		setLayoutBindings.data(),
+		static_cast<uint32_t>(setLayoutBindings.size()));
+
+	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_device, &descriptorLayout, nullptr, &m_descriptorSetLayouts.m_wireframe));
+
+	pPipelineLayoutCreateInfo =
+		vkUtils::initializers::pipelineLayoutCreateInfo(
+		&m_descriptorSetLayouts.m_wireframe,
+		1);
+
+	VK_CHECK_RESULT(vkCreatePipelineLayout(m_device, &pPipelineLayoutCreateInfo, nullptr, &m_pipelineLayouts.m_wireframe));
 
 	// === Compute for raytracing
 	setLayoutBindings =
@@ -1502,6 +1672,26 @@ void VulkanHybridRenderer::setupDescriptors()
 	};
 	vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
 
+	// === Wireframe
+	allocInfo =
+		vkUtils::initializers::descriptorSetAllocateInfo(
+		m_descriptorPool,
+		&m_descriptorSetLayouts.m_wireframe,
+		1);
+
+	VK_CHECK_RESULT(vkAllocateDescriptorSets(m_device, &allocInfo, &m_descriptorSets.m_wireframe));
+
+	writeDescriptorSets =
+	{
+		// Binding 0: UBO
+		vkUtils::initializers::writeDescriptorSet(
+		m_descriptorSets.m_wireframe,
+		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		0,
+		&m_uniformData.m_wireframe.descriptor),
+	};
+	vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
+
 	// === Compute descriptor set for ray tracing
 	allocInfo =
 		vkUtils::initializers::descriptorSetAllocateInfo(
@@ -1603,6 +1793,7 @@ void VulkanHybridRenderer::setupUniformBuffers(SRendererContext& context)
 	prepareTextureTarget(&m_compute.m_storageRaytraceImage, TEX_DIM, TEX_DIM, VK_FORMAT_R8G8B8A8_UNORM);
 	loadMeshes();
 	generateQuads();
+	generateWireframeBVHNodes();
 
 	// Fullscreen vertex shader
 	createBuffer(
@@ -1613,6 +1804,16 @@ void VulkanHybridRenderer::setupUniformBuffers(SRendererContext& context)
 		&m_uniformData.m_vsFullScreen.buffer,
 		&m_uniformData.m_vsFullScreen.memory,
 		&m_uniformData.m_vsFullScreen.descriptor);
+
+	// Wireframe vertex shader
+	createBuffer(
+		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		sizeof(glm::mat4),
+		nullptr,
+		&m_uniformData.m_wireframe.buffer,
+		&m_uniformData.m_wireframe.memory,
+		&m_uniformData.m_wireframe.descriptor);
 
 	// Deferred vertex shader
 	createBuffer(
@@ -1696,6 +1897,13 @@ void VulkanHybridRenderer::updateUniformBufferDeferredMatrices(SRendererContext&
 	VK_CHECK_RESULT(vkMapMemory(m_device, m_uniformData.m_vsOffscreen.memory, 0, sizeof(m_uboOffscreenVS), 0, (void **)&pData));
 	memcpy(pData, &m_uboOffscreenVS, sizeof(m_uboOffscreenVS));
 	vkUnmapMemory(m_device, m_uniformData.m_vsOffscreen.memory);
+
+	// === Wireframe
+	glm::mat4 vp = context.m_camera.m_matrices.m_projMtx * context.m_camera.m_matrices.m_viewMtx;
+	VK_CHECK_RESULT(vkMapMemory(m_device, m_uniformData.m_wireframe.memory, 0, sizeof(vp), 0, (void **)&pData));
+	memcpy(pData, &vp, sizeof(vp));
+	vkUnmapMemory(m_device, m_uniformData.m_wireframe.memory);
+
 }
 
 // Update fragment shader light position uniform block

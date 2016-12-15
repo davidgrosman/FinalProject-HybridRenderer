@@ -22,13 +22,19 @@ void main()
 	outPosition = vec4(inWorldPos, inMaterialIdNormalized);
 
 	// Calculate normal in tangent space
-	vec3 N = normalize(inNormal);
-	N.y = -N.y;
-	vec3 T = normalize(inTangent);
-	vec3 B = cross(N, T);
-	mat3 TBN = mat3(T, B, N);
-	vec3 tnorm = TBN * normalize(texture(samplerNormalMap, inUV).xyz * 2.0 - vec3(1.0));
-	outNormal = vec4(tnorm, 1.0);
+
+	// Optional: read from normal map
+	//vec3 N = normalize(inNormal);
+	//N.y = -N.y;
+	//vec3 T = normalize(inTangent);
+	//vec3 B = cross(N, T);
+	//mat3 TBN = mat3(T, B, N);
+	//vec3 tnorm = TBN * normalize(texture(samplerNormalMap, inUV).xyz * 2.0 - vec3(1.0));
+	//outNormal = vec4(tnorm, 1.0);
 	outNormal = vec4(inNormal, 1.0);
+
+	if (inColor == vec3(0.0, 0.0, 0.0)) {
+		discard;
+	}
 	outAlbedo = vec4(inColor, 1.0);
 }

@@ -383,6 +383,8 @@ void VulkanRenderer::initVulkan(SRendererContext& context, bool enableValidation
 		// This is handled by a separate class that gets a logical device representation
 		// and encapsulates functions related to a device
 		m_vulkanDevice = new vk::VulkanDevice(m_physicalDevice);
+		enabledFeatures = {};
+		enabledFeatures.fillModeNonSolid = VK_TRUE;
 		VK_CHECK_RESULT(m_vulkanDevice->createLogicalDevice(enabledFeatures));
 		m_device = m_vulkanDevice->logicalDevice;
 

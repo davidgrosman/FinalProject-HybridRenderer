@@ -988,8 +988,10 @@ void VulkanMeshLoader::createBuffers(
 
 void VulkanMeshLoader::destroyBuffers(VkDevice device, vkMeshLoader::MeshBuffer *meshBuffer)
 {
-	vkDestroyBuffer(device, meshBuffer->vertices.buf, nullptr);
-	vkFreeMemory(device, meshBuffer->vertices.mem, nullptr);
+	if (meshBuffer->vertices.buf != VK_NULL_HANDLE) {		
+		vkDestroyBuffer(device, meshBuffer->vertices.buf, nullptr);
+		vkFreeMemory(device, meshBuffer->vertices.mem, nullptr);
+	}
 	if (meshBuffer->indices.buf != VK_NULL_HANDLE)
 	{
 		vkDestroyBuffer(device, meshBuffer->indices.buf, nullptr);

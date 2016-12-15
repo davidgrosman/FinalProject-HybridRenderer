@@ -97,6 +97,7 @@ private:
 		SSceneMesh m_floor;
 		SSceneMesh m_transparentObj;
 		vkMeshLoader::MeshBuffer m_quad;
+		vkMeshLoader::MeshBuffer m_bbox;
 	};
 
 	struct SVkVertices
@@ -112,6 +113,7 @@ private:
 		VkPipelineLayout m_offscreen;
 		VkPipelineLayout m_debug;
 		VkPipelineLayout m_raytrace;
+		VkPipelineLayout m_wireframe;
 	};
 
 	struct SVkPipelines
@@ -120,6 +122,7 @@ private:
 		VkPipeline m_offscreen;
 		VkPipeline m_debug;
 		VkPipeline m_raytrace;
+		VkPipeline m_wireframe;
 	};
 
 	struct SVertexShaderUniforms
@@ -141,11 +144,13 @@ private:
 		vkUtils::UniformData m_vsFullScreen;
 		vkUtils::UniformData m_vsOffscreen;
 		vkUtils::UniformData m_fsLights;
+		vkUtils::UniformData m_wireframe;
 	};
 
 	struct SVkDescriptorSets
 	{
 		VkDescriptorSet m_onscreen;
+		VkDescriptorSet m_wireframe;
 		VkDescriptorSet m_model;
 		VkDescriptorSet m_floor;
 		VkDescriptorSet m_debug;
@@ -155,6 +160,7 @@ private:
 	struct SVkDescriptorSetLayouts
 	{
 		VkDescriptorSetLayout m_onscreen;
+		VkDescriptorSetLayout m_wireframe;
 		VkDescriptorSetLayout m_offscreen;
 		VkDescriptorSetLayout m_debug;
 		VkDescriptorSetLayout m_raytrace;
@@ -198,6 +204,7 @@ private:
 	void loadTextures();
 	void loadMeshes();
 	void generateQuads();
+	void generateWireframeBVHNodes();
 
 private:
 

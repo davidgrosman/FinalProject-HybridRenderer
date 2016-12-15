@@ -12,6 +12,7 @@
 #define EPSILON 0.0001
 #define MAXLEN 1000.0
 #define TRACEDEPTH 2
+#define GROUND_MESH_IDX 1
 
 // ===== STRUCT DEFINITION ===== //
 struct Light {
@@ -359,7 +360,7 @@ Intersection computeIntersectionsWithBvh(
 	const int numMeshes = int(bvhNodes[0].bounds[0].w);
 	for (int iMeshIdx = 0; iMeshIdx < numMeshes; iMeshIdx++)
 	{
-	    if (iMeshIdx == 2) // Ground
+	    if (iMeshIdx == GROUND_MESH_IDX) // Ground
 			continue;
 
 		int nodeIdx = int(bvhNodes[iMeshIdx + 1].bounds[0].w);
@@ -377,13 +378,15 @@ Intersection computeIntersectionsWithBvh(
 						BVHAabb LNodes = bvhNodes[(nodeIdx + 1) + i];
 						// Reconstruct triangle
 						Triangle tri;
+						tri.materialId = iMeshIdx;
 						tri.vert0 = vec3(positions[int(LNodes.bounds[0].x)]);
 						tri.vert1 = vec3(positions[int(LNodes.bounds[0].y)]);
 						tri.vert2 = vec3(positions[int(LNodes.bounds[0].z)]);
 						tri.norm0 = vec3(normals[int(LNodes.bounds[0].x)]);
 						tri.norm1 = vec3(normals[int(LNodes.bounds[0].y)]);
 						tri.norm2 = vec3(normals[int(LNodes.bounds[0].z)]);
-                    
+
+
 						vec3 tmp_normal;
 						vec3 tmp_hitPoint;
 						float tTri = triangleIntersect(tri, ray, tmp_normal, tmp_hitPoint);
@@ -463,7 +466,7 @@ Intersection computeIntersectionsWithRootLevelBvh(
     const int numMeshes = int(bvhNodes[0].bounds[0].w);
 	for (int iMeshIdx = 0; iMeshIdx < numMeshes; iMeshIdx++)
     {
-        if (iMeshIdx == 2) // Ground
+        if (iMeshIdx == GROUND_MESH_IDX) // Ground
             continue;
     
         int nodeIdx = int(bvhNodes[iMeshIdx + 1].bounds[0].w);
@@ -620,6 +623,25 @@ float calcShadow(in Ray feeler, in int objectId, in float t)
 	return 1.0;
 } 
 
+// ===== MATH HELPERS ===== //
+float costheta(vec3 i, vec3 n) {
+	return dot(i, n);
+}
+
+float sintheta2(vec3 i, vec3 n) {
+	return max(0, 1 - costheta(i, n) * costheta(i, n));
+}
+
+// ===== MATERIALS ===== //
+
+// From pbrt, computing Fresnel reflection formula for dielectric materials and 
+// circularly polarized light.
+float frDiel(float cosi, float cost, float etai, float etat) {
+	float Rparl = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost));
+	float Rperp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost));
+	return (Rparl * Rparl + Rperp * Rperp) / 2.0;
+}
+
 void shadeMaterial(
 	in Intersection intersect,
 	inout PathSegment path
@@ -632,79 +654,104 @@ void shadeMaterial(
 
 	Material material = materials[intersect.materialId];
 
-	for (int i = 0; i < 10; ++i) {
-					
-		if (i >= ubo.lightCount) {
-			break;
-		}
 
-		vec3 lightVec = normalize(vec3(ubo.lights[i].position) - intersect.hitPoint);
-		float dist = length(vec3(ubo.lights[i].position) - intersect.hitPoint);
-		
-		if (dist >= ubo.lights[i].radius) {
-			continue;
-		}
+	
+	// === Refraction === //
 
-		// Light feeler test
-		Ray feeler;
-		feeler.origin = intersect.hitPoint + 0.001 * intersect.hitNormal;
-		feeler.direction = lightVec;
-        feeler.inv_direction = vec3(1/feeler.direction.x, 1/feeler.direction.y, 1/feeler.direction.z);
-        feeler.sign[0] = (feeler.inv_direction.x < 0) ? 1 : 0;
-        feeler.sign[1] = (feeler.inv_direction.y < 0) ? 1 : 0;
-        feeler.sign[2] = (feeler.inv_direction.z < 0) ? 1 : 0;
-			
-		// @note: only compute shadows for the ground
-		float shadow = 1;
-		if (ubo.isShadows) {
-			shadow = calcShadow(feeler, intersect.materialId, dist); 
-		}
-	
-		// Attenuation
-		float atten = ubo.lights[i].radius - dist;//ubo.lights[i].radius / (pow(dist, 2.0) + 1.0);
-		
-		// Diffuse
-		float diffuse = lightDiffuse(intersect.hitNormal, lightVec);
-		vec3 diffuseColor = diffuse * vec3(material.diffuse);
-		
-		// Specular
-		float specular = lightSpecular(vec3(ubo.cameraPosition), intersect.hitNormal, lightVec, 32);
-		vec3 specularColor = specular * ubo.lights[i].color; 
-		
-		if (material.refracti < 1.1) {
-			path.color += diffuseColor * ubo.lights[i].color * atten;
-			path.color *= shadow;
-		}
-	}
-	
 	if (ubo.isTransparency && material.refracti > 1.0) {
 
+		// Compute indices of refraction for dielectric
 		float ei = 1.0;
-		float et = 1.1;//material.refracti;
-		bool entering = dot(path.ray.direction, intersect.hitNormal) < 0;
+		float et = material.refracti + 1.1;
+		float cosi = clamp(dot(path.ray.direction, intersect.hitNormal), -1, 1);
+		bool entering = cosi < 0;
 		if (!entering) {
 			float t = ei;
 			ei = et;
 			et = t;
 		}
-
 		float eta = ei / et;
-		path.ray.direction = normalize(refract(path.ray.origin, intersect.hitNormal, eta));
+
+		// Compute internal reflection
+		float sint = eta * sqrt(max(0.0, 1.0 - cosi * cosi));
+		float sini2 = sintheta2(path.ray.direction, intersect.hitNormal);
+		float sint2 = eta * eta * sini2;
+		if (sint >= 1.0 || sint2 >= 1.0) {
+			path.remainingBounces = 0;			
+		} else {
+
+			path.ray.direction = normalize(refract(path.ray.direction, intersect.hitNormal, eta));
+			path.ray.origin = intersect.hitPoint + 0.1 * path.ray.direction;
+		
+			// Mix color
+			float alpha = 0.0;
+			path.color = mix(path.color, clamp(abs(dot(path.ray.direction, intersect.hitNormal)), 0, 1) * vec3(material.diffuse), alpha);
+		
+			path.objectId = intersect.materialId;
+			path.remainingBounces--;
+			path.bounces++;
+
+		}
+
+
+	// === Reflection === //
+	} else if (ubo.isReflection && intersect.materialId == GROUND_MESH_IDX) {
+		path.ray.direction = normalize(reflect(path.ray.direction, intersect.hitNormal));
 		path.ray.origin = intersect.hitPoint + 0.1 * path.ray.direction;
-		float alpha = 0.3;
-		path.color = mix(path.color, clamp(abs(dot(path.ray.direction, intersect.hitNormal)), 0, 1) * vec3(material.diffuse), alpha);
+		
+		path.color += clamp(abs(dot(path.ray.direction, intersect.hitNormal)), 0, 1) * vec3(material.diffuse);
+
 		path.objectId = intersect.materialId;
 		path.remainingBounces--;
 		path.bounces++;
 
-	} else if (ubo.isReflection) {
-		path.ray.direction = normalize(reflect(path.ray.origin, intersect.hitNormal));
-		path.ray.origin = intersect.hitPoint + 0.1 * path.ray.direction;
-		path.color *= clamp(abs(dot(path.ray.direction, intersect.hitNormal)), 0, 1) * vec3(material.specular) * 1.5;
-		path.remainingBounces--;
-		path.bounces++;
+	// === Diffuse === //
 	} else {
 		path.remainingBounces = 0;
+
+		// === Shadow test
+		for (int i = 0; i < 10; ++i) {
+					
+			if (i >= ubo.lightCount) {
+				break;
+			}
+
+			vec3 lightVec = normalize(vec3(ubo.lights[i].position) - intersect.hitPoint);
+			float dist = length(vec3(ubo.lights[i].position) - intersect.hitPoint);
+		
+			if (dist >= ubo.lights[i].radius) {
+				continue;
+			}
+
+			// Light feeler test
+			Ray feeler;
+			feeler.origin = intersect.hitPoint + 0.001 * intersect.hitNormal;
+			feeler.direction = lightVec;
+			feeler.inv_direction = vec3(1/feeler.direction.x, 1/feeler.direction.y, 1/feeler.direction.z);
+			feeler.sign[0] = (feeler.inv_direction.x < 0) ? 1 : 0;
+			feeler.sign[1] = (feeler.inv_direction.y < 0) ? 1 : 0;
+			feeler.sign[2] = (feeler.inv_direction.z < 0) ? 1 : 0;
+			
+			// @note: only compute shadows for the ground
+			float shadow = 1;
+			if (ubo.isShadows && intersect.materialId == GROUND_MESH_IDX) { // ground material
+				shadow = calcShadow(feeler, intersect.materialId, dist); 
+			}
+	
+			// Attenuation
+			float atten = ubo.lights[i].radius - dist;//ubo.lights[i].radius / (pow(dist, 2.0) + 1.0);
+		
+			// Diffuse
+			float diffuse = lightDiffuse(intersect.hitNormal, lightVec);
+			vec3 diffuseColor = diffuse * vec3(material.diffuse);
+		
+			// Specular
+			float specular = lightSpecular(vec3(ubo.cameraPosition), intersect.hitNormal, lightVec, 32);
+			vec3 specularColor = specular * vec3(material.specular); 
+		
+			path.color += diffuseColor * ubo.lights[i].color * atten + specularColor;
+			path.color *= shadow;
+		}
 	}
 }
 
@@ -712,7 +759,6 @@ void renderScene(inout PathSegment path)
 {
 	
 	vec3 color = vec3(1,0,0);
-	float t = MAXLEN;
 
 	// Compute intersection
 	//Intersection intersect = computeIntersections(0, path.ray);	
@@ -757,7 +803,7 @@ void main()
 
 	PathSegment path;
 	path.remainingBounces = TRACEDEPTH;
-	path.ray.direction = normalize(position - vec3(ubo.cameraPosition));
+	path.ray.direction = normalize(vec3(ubo.cameraPosition) - position);
 	path.ray.origin = position + 0.01 * path.ray.direction;
 	path.color = vec3(0,0,0);
 	path.objectId = materialId; // Use material ID as object ID

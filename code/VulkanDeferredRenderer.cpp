@@ -528,7 +528,7 @@ void VulkanDeferredRenderer::loadMeshes()
 		SSceneAttributes sceneAttributes;
 		loadMesh(getAssetPath() + m_fileName, &m_sceneMeshes.m_model, &sceneAttributes, vertexLayout, &meshCreateInfo);
 		std::cout << "Number of vertices: " << sceneAttributes.m_verticePositions.size() << std::endl;
-		std::cout << "Number of triangles: " << sceneAttributes.m_verticePositions.size() / 3 << std::endl;
+		std::cout << "Number of triangles: " << sceneAttributes.m_indices.size() << std::endl;
 	}
 
 	//{
