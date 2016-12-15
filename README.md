@@ -10,6 +10,10 @@
  * Microsoft Windows 10 Home, i7-4790 CPU @ 3.60GHz 12GB, GTX 980 Ti (Person desktop).
  * Microsoft Windows  7 Professional, i7-5600U @ 2.6GHz, 256GB, GeForce 840M (Personal laptop).
 
+# Credits
+
+Our code base was adapted from [Vulkan Samples](https://github.com/SaschaWillems/Vulkan) by Sascha Willems and [Vulkan Tutorial](https://vulkan-tutorial.com/) by Alexander Overvoorde. [Github](https://github.com/Overv/VulkanTutorial). Big thanks to their incredible effort to bring Vulkan to the community!
+
 ### Video demo (click on image)
 
 <a href="https://www.youtube.com/embed/LI-4krLiWOo" target="_blank"><img src="http://img.youtube.com/vi/LI-4krLiWOo/0.jpg" 
