@@ -896,7 +896,9 @@ void VulkanHybridRenderer::buildCommandBuffers()
 		vkCmdBindIndexBuffer(m_drawCmdBuffers[i], m_sceneMeshes.m_quad.indices.buf, 0, VK_INDEX_TYPE_UINT32);
 		vkCmdDrawIndexed(m_drawCmdBuffers[i], 6, 1, 0, 0, 1);
 
-		if (m_debugDisplay && m_enableBVH) {
+		if (m_debugBVH) {
+
+			vkCmdSetViewport(m_drawCmdBuffers[i], 0, 1, &viewport);
 
 			// -- Draw BVH tree
 			
@@ -2001,9 +2003,18 @@ void VulkanHybridRenderer::toggleDebugDisplay()
 	updateUniformBuffersScreen();
 }
 
+void VulkanHybridRenderer::toggleDebugBVH()
+{
+	VulkanRenderer::toggleDebugBVH();
+	reBuildCommandBuffers();
+	updateUniformBuffersScreen();
+}
+
 void VulkanHybridRenderer::toggleBVH()
 {
 	VulkanRenderer::toggleBVH();
+	reBuildCommandBuffers();
+	updateUniformBuffersScreen();
 	reBuildRaytracingCommandBuffers();
 
 	// Toggle bvh flag

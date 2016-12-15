@@ -305,6 +305,7 @@ void VulkanRenderer::loadMesh(std::string filename, vkMeshLoader::MeshBuffer * m
 VulkanRenderer::VulkanRenderer(const std::string& fileName)
 : m_wasInitialized(false)
 , m_debugDisplay(false)
+, m_debugBVH(false)
 , m_enableBVH(false)
 , m_enableShadows(false)
 , m_enableTransparency(false)
@@ -505,6 +506,9 @@ void VulkanRenderer::render(SRendererContext& context)
 	if (context.m_debugDraw != m_debugDisplay)
 	{
 		toggleDebugDisplay();
+	}
+	else if (context.m_debugBVH != m_debugBVH) {
+		toggleDebugBVH();
 	} else if (context.m_enableBVH != m_enableBVH) {
 		toggleBVH();
 	}

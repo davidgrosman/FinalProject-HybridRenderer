@@ -66,6 +66,7 @@ public:
 	////////					Event-Handler Functions  								     ////////
 
 	void toggleDebugDisplay() override;
+	void toggleDebugBVH() override;
 	void toggleBVH() override;
 	void toggleShadows() override;
 	void toggleTransparency() override;

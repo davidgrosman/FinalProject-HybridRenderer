@@ -66,6 +66,7 @@ public:
 	virtual void draw(SRendererContext& context) = 0;
 
 	virtual void toggleDebugDisplay() { m_debugDisplay = !m_debugDisplay; }
+	virtual void toggleDebugBVH() { m_debugBVH = !m_debugBVH;  }
 	virtual void toggleBVH() { m_enableBVH = !m_enableBVH; }
 	virtual void toggleShadows() { m_enableShadows = !m_enableShadows; }
 	virtual void toggleTransparency() { m_enableTransparency = !m_enableTransparency; }
@@ -211,6 +212,7 @@ protected:
 	bool m_wasInitialized;
 
 	bool m_debugDisplay;
+	bool m_debugBVH;
 	bool m_enableBVH;
 	bool m_enableShadows;
 	bool m_enableTransparency;
