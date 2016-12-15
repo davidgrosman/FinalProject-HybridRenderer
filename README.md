@@ -51,9 +51,15 @@ Our application's overview from the top-down:
 
 # Optimization
 
-### BVH
+### Bounding Volume Hierarchy
 
 ![](/docs/images/bvh.gif)
+
+We use axis-aligned boxes as bounding volumes over our scene geometry since they ar easy to compute, needs only few bytes of storage, and there are already many [Efficient and Robust Ray–Box Intersection Algorithms](http://www.cs.utah.edu/~awilliam/box/box.pdf)
+We build our BVH Trees using a Top-down approach where we partition the input set into two subsets along the biggest-extent axis. Our BVH Tree construction takes in two input configurations: 1) Max. number of triangles per leaf node and 2) Max Depth of the Tree.
+
+Note that we have a BVH tree per scene mesh (allowing for better/faster tree construction/traversal) and each tree is composed of a set of BVH Nodes which are encoded as two vec4s in our Vulkan’s raytracing compute shader (.w components are used as indices to right/left child node).
+Note that Shadows are drawn up to 6 times faster when using our BVH optimization.
 
 ### Ray-triangle intersection
 
