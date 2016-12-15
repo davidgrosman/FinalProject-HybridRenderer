@@ -7,12 +7,8 @@
 # Team members
 - **Names:** Trung Le ([website](http://www.trungtuanle.com/)) and David Grosman.
 - **Tested on:** 
- * Microsoft Windows 10 Home, i7-4790 CPU @ 3.60GHz 12GB, GTX 980 Ti (Person desktop).
- * Microsoft Windows  7 Professional, i7-5600U @ 2.6GHz, 256GB, GeForce 840M (Personal laptop).
-
-# Credits
-
-Our code base was adapted from [Vulkan Samples](https://github.com/SaschaWillems/Vulkan) by Sascha Willems and [Vulkan Tutorial](https://vulkan-tutorial.com/) by Alexander Overvoorde. [Github](https://github.com/Overv/VulkanTutorial). Big thanks to their incredible effort to bring Vulkan to the community!
+ * Microsoft Windows 10 Home, i7-4790 CPU @ 3.60GHz 12GB, GTX 980 Ti (Desktop).
+ * Microsoft Windows  7 Professional, i7-5600U @ 2.6GHz, 256GB, GeForce 840M (Laptop).
 
 ### Video demo (click on image)
 
@@ -195,6 +191,13 @@ This is when a vertex attribute weren't intialized correctly,
 
 Our project uses CMake to build. Requires a Vulkan-capable graphics card, Visual Studio 2013, target platform x64.
 
+# Credits
+
+We would like to thank:
+* [Sascha Willems](https://github.com/SaschaWillems/Vulkan) and [Alexander Overvoorde](https://github.com/Overv/VulkanTutorial) which greatly inspired our initial code-base; Big thanks to their incredible effort to bring Vulkan to the community!
+* [Morgan McGuire](http://cs.williams.edu/~morgan/) and [Gareth Morgan, Jesper Mortensen](http://www.gdcvault.com/play/1020688/Practical-Techniques-for-Ray-Tracing) for giving us the idea of implement an Hybrid Renderer.
+
+ 
 # References
 * [Practical techniques for ray-tracing in games][Practical techniques for ray-tracing in games]
 * [GDCVault14: Practical techniques for ray-tracing in games](http://www.gdcvault.com/play/1020688/Practical-Techniques-for-Ray-Tracing)
