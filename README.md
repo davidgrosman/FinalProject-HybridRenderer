@@ -9,7 +9,7 @@
 
 ## Overview
 
-[insert gif here]
+![](/docs/images/bear_boxes/gif)
 
 Deferred rendering has gained major popularity in real-time rendering. Some of its advantages are the fact that it reduces the rendering algorithm complexity from `O(numLights*numObjects)` to `O(numLights + numObjects)` by rendering a scene in two passes: It first renders the scene geometry into a G-Buffer and then, uses that G-Buffer to calculate the scene lighting in a second pass. It is also easier to maintain since the Lighting stage is entirely disconnected from the Geometry stage. Unfortunately, deferred rendering is not the best solution for all cases:
 
@@ -28,38 +28,31 @@ There are only 3 layers needed in the G-buffer: position, normal, material ID to
 ```
 800 x 800 x 1000 ray-triangle intersections = 640,000,000 ray-triangle intersections
 ```
-With deferred shading aid, we basically eliminate this first bounce cost and transfer that onto the rasterization cost done inside the fragment shader in hardware.
+With deferred shading aid, we basically eliminate entirely this first bounce cost and transfer that onto the rasterization cost done inside the fragment shader in hardware.
 
- 
+With raytracing, we're now able to implement shadows and and refractive or reflective material. For this project, we are not implementing PBR materials.
+
 # Our pipeline
 
-[insert image here]
+Our rendering pipeline is broken down into three stages: deferred, raytracing, and on screen output.
 
- 
-# Debugging tools
+![](/docs/Hybrid_ray_raster_pipeline.png)
 
-1. Deferred shading layers
-2. BVH visualization
-3. Feature user input to toggle
- 
-# Performance Analysis
+As you can see in the image above, the CPU first computed the BVH structure of our scene. The deferred pass is renderred off-screen, then passes the G-buffer to the compute shader to perform raytracing. The result is then taken from the image texture from compute shader and rendered on-screen.
 
-_Our performance analysis was done using the following test scenes_
+# About Vulkan
 
-1. Far scene
+Vulkan is a great graphics API. It is quite verbose, required careful planning and code structuring since everything is recorded before it runs. This project allows us some working experience with building a Vulkan rendering framework.
 
-[insert image here] 
+Our application's overview from the top-down:
 
-2. Close scene
-
-[insert image here] 
-
+![](/docs/FinalProject-HybridRayRaster_ComponentDiagram.png)
 
 # Optimization
 
 ### BVH
 
-[insert image here]
+![](/docs/images/bvh.gif)
 
 ### Ray-triangle intersection
 
@@ -67,19 +60,107 @@ We used [Muller's fast triangle intersection test](https://www.cs.virginia.edu/~
 
 ### Shadows computation
 
+We only computed shadows for ground-level surfaces to avoid unnecessarily checking surfaces that are high up and unlikely to be in shadows for our test scene. We think this is a reasonable approach, since it's a common practice in game design.
+
 ### G-buffer packing
 
 - Material ID is passed into the shader first as the fourth element of indices
-- Instead of having an additional G-buffer for material ID, using the w element of position inside the position layer
-- Passing in the triangles into the raytracing compute shaders as triangle soup.
-- Uses uint16_t indices
+- Instead of having an additional G-buffer for material ID, using the w element of position inside the position layer. This value was normalized by the material count of the entire scene.
+
+### Small optimizations
+- Pass in the triangles into the raytracing compute shaders as triangle soup. Since the scene can be quite big, the triangle soup helps reduce the amount of vertices having to pass to our shaders.
+- Use uint16_t indices for binding index buffer to the pipeline.
 
 ### Early termination
 - If geometry's normal == vec3(0), don't raytrace
 
+# Debugging tools
+
+1. Deferred shading layers
+
+_This debugging tool can be enabled by hitting 'F' key_
+
+![](/docs/images/testscene_bear_far_gbuffer.png)
+
+
+2. BVH visualization
+
+_This debugging tool can be enabled by hitting 'G' key_
+
+![](/docs/images/bvh_01.png)
+
+
+3. Color by ray bounces
+
+_This debugging tool can be enabled by hitting 'C' key_
+
+![](/docs/images/testscene_bear_far_color_by_ray_bounces.png)
+
+4. Toggleable effects
+
+All effects in our renderer can be toggled on and off using the following keys:
+
+![](/docs/images/testscene_bear_far_reflection.png)
+
+- 'F': toggle G-buffer viewing
+- 'G': toggle BVH visualization
+- 'B': toggle BVH 
+- 'Y': toggle shadows
+- 'T': toggle refraction
+- 'R': toggle reflection
+- 'L': add more lights
+- 'C': toggle coloring by number of ray bounces
+
+# Performance Analysis
+
+The bottleneck of the pipeline is in the ray tracing pass. This has been traditionally quite slow. 
+
+In order to test our performance we a) varying the number of moving lights, 2) zoomed in from the camera to cover more pixels and 3) toggling on and off shadows, refraction, and BVH optimization. Our scene configuration is:
+
+- Image size: 800x800
+- Compute shader work groups: 16x16
+- 5086 triangles and 15258 vertices
+- Tested on Microsoft Windows 10 Home, Microsoft Visual Studio 2015, target x64, i7-4790 CPU @ 3.60GHz 12GB, GTX 980 Ti
+
+**1. Far scene.** Camera is at -30.0f Z unit away
+
+| Scene | Analysis |
+| --- | ---|
+|![](/docs/images/testscene_bear_far.png| ![](/docs/analysis/zoomed_out_bear_boxes.png)|
+
+- Refraction: Interestingly, refraction doesn't seem to be affected. We were able to maintain the same frame rate through out.
+- Shadow: this effect does get hit big. We tanked right away as soon as shadow is turned on, dropped below ~15 FPS. With the aid of BVH, we were able to gain back ~10 FPS. Acceleration data structure choice and configuration plays an important role here. This showcase that our renderer isn't quite ready for real-time application yet.
+
+**2. Close scene.** Camera is at -15.0f unit away
+
+| Scene | Analysis |
+| --- | ---|
+|![](/docs/images/testscene_bear_close.png)| ![](/docs/analysis/zoomed_in_bear_boxes.png)|
+
+- Refraction: Up close, more weaknesses can be scene with hybrid rendering. Refraction now has a significant drop to 20FPS. However, it stays the same across varying number of light sources. This is because refraction is affected by material types, not the number of lights in the scene.
+- Shadow: Again, shadow isn't in good shape. We need more improvement to increase our framerate.
+
+A lot of the improvement lies in an efficient acceleration data structure and effecient memory access pattern. 
+
+Similarly, we compared the same scene with our raytracing only renderer, but the framerate was consistently at 1FPS, so we decided that a hybrid renderer is in fact faster that traditional raytracing.
+
+# Final thoughts
+
+The project had a great deal of software engineering in term of developing a Vulkan graphics engine and team collaboration. It was also a great opportunity for us to explore the possibility of using raytracing in real-time application. Eventhough we were not able to achieve the frame-rate compare to PowerVR raytracing demo, we gained a great deal of experience.
+
 # Gallery
 
-[insert images here]
+![](/docs/images/knot_shadows_02.png)
+
+![](/docs/images/astronauts_02.png)
+
+![](/docs/images/bear.gif)
+
+![](/docs/images/boxes_reflective_tracedepth_3.png)
+
+![](/docs/images/raytraced_octocat.png)
+
+### Bloopers (yes, of course)
 
 # Build instruction
 
